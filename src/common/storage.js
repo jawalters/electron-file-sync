@@ -61,8 +61,20 @@
     callback(null);
   }
 
-  module.exports.saveSession = function(session) {
-    sessions.insert(session);
+  module.exports.saveSession = function(newSession) {
+    let session = sessions.findOne({ id: newSession.id });
+    if (session) {
+      session.name = newSession.name;
+      session.targetId = newSession.targetId;
+      session.localPath = newSession.localPath;
+      session.remotePath = newSession.remotePath;
+      session.recursive = newSession.recursive;
+
+      sessions.update(session);
+    } else {
+      sessions.insert(newSession);
+    }
+
     db.saveDatabase();
   }
 
@@ -72,5 +84,15 @@
 
   module.exports.getSession = function(query, callback) {
     callback(null, sessions.findOne(query));
+  }
+
+  module.exports.deleteSession = function(query, callback) {
+    let session = sessions.findOne(query);
+    if (session) {
+      sessions.remove(session);
+      db.saveDatabase();
+    }
+
+    callback(null);
   }
 }());

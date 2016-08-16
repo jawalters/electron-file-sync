@@ -11,6 +11,7 @@ const dialog = electron.dialog;
 
 let mainWindow;
 let targetWindow;
+let sessionWindow;
 
 let template = [
   {
@@ -30,6 +31,25 @@ let template = [
       },
       {
         label: 'Delete Target',
+        enabled: false
+      },
+      {
+        type: 'separator'
+      },
+      {
+        label: 'New Session',
+        accelerator: (process.platform === 'darwin') ? 'Command+S' : undefined,
+        click: function() {
+          sessionWindow.webContents.send('asynchronous-message', 'new session');
+          sessionWindow.show();
+        }
+      },
+      {
+        label: 'Edit Session',
+        enabled: false
+      },
+      {
+        label: 'Delete Session',
         enabled: false
       },
       {
@@ -60,15 +80,6 @@ function createMainWindow() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-app.on('ready', function() {
-  storage.init('file-sync.db', function() {
-    loadMenus();
-
-    createMainWindow();
-    createTargetWindow();
-  });
-});
-
 function createTargetWindow() {
   targetWindow = new BrowserWindow({ width: 700, height: 500, frame: false, show: false });
 
@@ -82,6 +93,32 @@ function createTargetWindow() {
 
   targetWindow.setMenu(null);
 }
+
+function createSessionWindow() {
+  sessionWindow = new BrowserWindow({ width: 700, height: 500, frame: false, show: false });
+
+  sessionWindow.loadURL(`file://${__dirname}/views/session.html`);
+
+  sessionWindow.webContents.openDevTools();
+
+  sessionWindow.on('closed', function() {
+    sessionWindow = null;
+  });
+
+  sessionWindow.setMenu(null);
+}
+
+app.on('ready', function() {
+  storage.init('file-sync.db', function() {
+    loadTargetMenus(function() {
+      loadSessionMenus(function() {
+        createMainWindow();
+        createTargetWindow();
+        createSessionWindow();
+      });
+    });
+  });
+});
 
 app.on('window-all-closed', function() {
   if (process.platform !== 'darwin') {
@@ -97,12 +134,17 @@ app.on('activate', function() {
   if (targetWindow === null) {
     createTargetWindow();
   }
+
+  if (sessionWindow === null) {
+    createSessionWindow();
+  }
 });
 
-function loadMenus() {
+function loadTargetMenus(callback) {
   storage.getTargets(function(err, targets) {
     if (err) {
       console.log(err);
+      callback(err);
     } else {
       if (targets.length) {
         template[0].submenu[1].submenu = [];
@@ -129,7 +171,7 @@ function loadMenus() {
               dialog.showMessageBox(options, function(index) {
                 if (index) {
                   storage.deleteTarget({ id: item.id }, function() {
-                    loadMenus();
+                    loadTargetMenus(function() {});
                   });
                 }
                 console.log(index);
@@ -154,6 +196,70 @@ function loadMenus() {
       }
 
       Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
+      callback(null);
+    }
+  });
+}
+
+function loadSessionMenus(callback) {
+  storage.getSessions(function(err, sessions) {
+    if (err) {
+      console.log(err);
+      callback(err);
+    } else {
+      if (sessions.length) {
+        template[0].submenu[5].submenu = [];
+        template[0].submenu[6].submenu = [];
+
+        sessions.forEach(function(item) {
+          template[0].submenu[5].submenu.push({
+            label: item.name,
+            click: function() {
+              sessionWindow.webContents.send('asynchronous-message', item.id);
+              sessionWindow.show();
+            }
+          });
+
+          template[0].submenu[6].submenu.push({
+            label: item.name,
+            click: function() {
+              const options = {
+                type: 'info',
+                title: 'Delete Confirmation',
+                message: `Are you sure you want to delete the session '${ item.name }'?`,
+                buttons: ['No', 'Yes']
+              };
+              dialog.showMessageBox(options, function(index) {
+                if (index) {
+                  storage.deleteSession({ id: item.id }, function() {
+                    loadSessionMenus(function() {});
+                  });
+                }
+                console.log(index);
+              });
+            }
+          });
+        });
+
+        template[0].submenu[5].enabled = true;
+        template[0].submenu[6].enabled = true;
+      } else {
+        if (template[0].submenu[5].submenu) {
+          delete template[0].submenu[5].submenu;
+        }
+
+        if (template[0].submenu[6].submenu) {
+          delete template[0].submenu[6].submenu;
+        }
+
+        template[0].submenu[5].enabled = false;
+        template[0].submenu[6].enabled = false;
+      }
+
+      Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
+      callback(null);
     }
   });
 }
@@ -163,12 +269,21 @@ ipcMain.on('asynchronous-message', function(event, arg) {
   if (typeof arg === 'string') {
     switch (arg) {
       case 'target saved':
-        loadMenus();
+        loadTargetMenus(function() {});
         targetWindow.hide();
         break;
 
       case 'target cancelled':
         targetWindow.hide();
+        break;
+
+      case 'session saved':
+        loadSessionMenus(function() {});
+        sessionWindow.hide();
+        break;
+
+      case 'session cancelled':
+        sessionWindow.hide();
         break;
 
       default:
