@@ -1,0 +1,11 @@
+{
+  "name": "file-sync",
+  "version": "0.0.1",
+  "description": "File synchronization application",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lokijs": "^1.4.1",
+    "node-uuid": "^1.4.7"
+  }
+}
