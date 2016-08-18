@@ -265,7 +265,6 @@ function loadSessionMenus(callback) {
 }
 
 ipcMain.on('asynchronous-message', function(event, arg) {
-  console.log('async message', arg);
   if (typeof arg === 'string') {
     switch (arg) {
       case 'target saved':

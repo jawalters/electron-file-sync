@@ -69,6 +69,7 @@
       session.localPath = newSession.localPath;
       session.remotePath = newSession.remotePath;
       session.recursive = newSession.recursive;
+      session.fileIgnoreList = newSession.fileIgnoreList;
 
       sessions.update(session);
     } else {

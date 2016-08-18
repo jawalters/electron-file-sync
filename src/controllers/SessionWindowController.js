@@ -19,6 +19,7 @@
             $scope.session.localPath = '';
             $scope.session.remotePath = '';
             $scope.session.recursive = false;
+            $scope.session.fileIgnoreList = '';
             storage.getTargets(function(err, targets) {
               if (!err) {
                 $scope.targets = targets;
@@ -40,6 +41,7 @@
                   $scope.session.localPath = session.localPath;
                   $scope.session.remotePath = session.remotePath;
                   $scope.session.recursive = session.recursive;
+                  $scope.session.fileIgnoreList = session.fileIgnoreList;
                   storage.getTargets(function(err, targets) {
                     if (!err) {
                       $scope.targets = targets;
