@@ -1,0 +1,15 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h3>
+    <button type="button" class="btn btn-default btn-xs panel-heading-buttons" id="endSession" ng-click="endSession(sessionConfig.id)" onclick="this.blur();">
+      <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="btn btn-default btn-xs panel-heading-buttons" id="editConfig" ng-click="editSession(sessionConfig.id)" onclick="this.blur();">
+      <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="panel-body">
+    <button type="button" class="btn btn-default" id="push" ng-click="push()">Push</button><br>
+    <button type="button" class="btn btn-default" id="pull" ng-click="pull()">Pull</button>
+  </div>
+</div>

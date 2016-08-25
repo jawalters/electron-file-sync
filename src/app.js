@@ -1,6 +1,6 @@
 const electron = require('electron');
 
-const storage = require('./common/storage.js');
+const storage = require('./utils/storage.js');
 
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
@@ -15,7 +15,7 @@ let sessionWindow;
 
 let template = [
   {
-    label: 'File',
+    label: 'Targets',
     submenu: [
       {
         label: 'New Target',
@@ -35,7 +35,12 @@ let template = [
       },
       {
         type: 'separator'
-      },
+      }
+    ]
+  },
+  {
+    label: 'Sessions',
+    submenu: [
       {
         label: 'New Session',
         accelerator: (process.platform === 'darwin') ? 'Command+S' : undefined,
@@ -56,11 +61,8 @@ let template = [
         type: 'separator'
       },
       {
-        label: 'Quit',
-        accelerator: (process.platform === 'darwin') ? 'Command+Q' : undefined,
-        click: function() {
-          app.quit();
-        }
+        label: 'Start Session',
+        enabled: false
       }
     ]
   }
@@ -69,7 +71,7 @@ let template = [
 function createMainWindow() {
   mainWindow = new BrowserWindow({ width: 800, height: 600 });
 
-  mainWindow.loadURL(`file://${__dirname}/views/main.html`);
+  mainWindow.loadURL(`file://${ __dirname }/views/main.html`);
 
   mainWindow.webContents.openDevTools();
 
@@ -83,7 +85,7 @@ function createMainWindow() {
 function createTargetWindow() {
   targetWindow = new BrowserWindow({ width: 700, height: 500, frame: false, show: false });
 
-  targetWindow.loadURL(`file://${__dirname}/views/target.html`);
+  targetWindow.loadURL(`file://${ __dirname }/views/target.html`);
 
   targetWindow.webContents.openDevTools();
 
@@ -97,7 +99,7 @@ function createTargetWindow() {
 function createSessionWindow() {
   sessionWindow = new BrowserWindow({ width: 700, height: 500, frame: false, show: false });
 
-  sessionWindow.loadURL(`file://${__dirname}/views/session.html`);
+  sessionWindow.loadURL(`file://${ __dirname }/views/session.html`);
 
   sessionWindow.webContents.openDevTools();
 
@@ -110,6 +112,7 @@ function createSessionWindow() {
 
 app.on('ready', function() {
   storage.init('file-sync.db', function() {
+    loadMenu();
     loadTargetMenus(function() {
       loadSessionMenus(function() {
         createMainWindow();
@@ -141,17 +144,21 @@ app.on('activate', function() {
 });
 
 function loadTargetMenus(callback) {
+  const targetsTemplateIndex = 1;
+  const editIndex = 1;
+  const deleteIndex = 2;
+
   storage.getTargets(function(err, targets) {
     if (err) {
       console.log(err);
       callback(err);
     } else {
       if (targets.length) {
-        template[0].submenu[1].submenu = [];
-        template[0].submenu[2].submenu = [];
+        template[targetsTemplateIndex].submenu[editIndex].submenu = [];
+        template[targetsTemplateIndex].submenu[deleteIndex].submenu = [];
 
         targets.forEach(function(item) {
-          template[0].submenu[1].submenu.push({
+          template[targetsTemplateIndex].submenu[editIndex].submenu.push({
             label: item.name,
             click: function() {
               targetWindow.webContents.send('asynchronous-message', item.id);
@@ -159,7 +166,7 @@ function loadTargetMenus(callback) {
             }
           });
 
-          template[0].submenu[2].submenu.push({
+          template[targetsTemplateIndex].submenu[deleteIndex].submenu.push({
             label: item.name,
             click: function() {
               const options = {
@@ -180,19 +187,19 @@ function loadTargetMenus(callback) {
           });
         });
 
-        template[0].submenu[1].enabled = true;
-        template[0].submenu[2].enabled = true;
+        template[targetsTemplateIndex].submenu[editIndex].enabled = true;
+        template[targetsTemplateIndex].submenu[deleteIndex].enabled = true;
       } else {
-        if (template[0].submenu[1].submenu) {
-          delete template[0].submenu[1].submenu;
+        if (template[targetsTemplateIndex].submenu[editIndex].submenu) {
+          delete template[targetsTemplateIndex].submenu[editIndex].submenu;
         }
 
-        if (template[0].submenu[2].submenu) {
-          delete template[0].submenu[2].submenu;
+        if (template[targetsTemplateIndex].submenu[deleteIndex].submenu) {
+          delete template[targetsTemplateIndex].submenu[deleteIndex].submenu;
         }
 
-        template[0].submenu[1].enabled = false;
-        template[0].submenu[2].enabled = false;
+        template[targetsTemplateIndex].submenu[editIndex].enabled = false;
+        template[targetsTemplateIndex].submenu[deleteIndex].enabled = false;
       }
 
       Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -203,17 +210,23 @@ function loadTargetMenus(callback) {
 }
 
 function loadSessionMenus(callback) {
+  const sessionsTemplateIndex = 2;
+  const editIndex = 1;
+  const deleteIndex = 2;
+  const startSessionIndex = 4;
+
   storage.getSessions(function(err, sessions) {
     if (err) {
       console.log(err);
       callback(err);
     } else {
       if (sessions.length) {
-        template[0].submenu[5].submenu = [];
-        template[0].submenu[6].submenu = [];
+        template[sessionsTemplateIndex].submenu[editIndex].submenu = [];
+        template[sessionsTemplateIndex].submenu[deleteIndex].submenu = [];
+        template[sessionsTemplateIndex].submenu[startSessionIndex].submenu = [];
 
         sessions.forEach(function(item) {
-          template[0].submenu[5].submenu.push({
+          template[sessionsTemplateIndex].submenu[editIndex].submenu.push({
             label: item.name,
             click: function() {
               sessionWindow.webContents.send('asynchronous-message', item.id);
@@ -221,7 +234,7 @@ function loadSessionMenus(callback) {
             }
           });
 
-          template[0].submenu[6].submenu.push({
+          template[sessionsTemplateIndex].submenu[deleteIndex].submenu.push({
             label: item.name,
             click: function() {
               const options = {
@@ -240,21 +253,35 @@ function loadSessionMenus(callback) {
               });
             }
           });
+
+          template[sessionsTemplateIndex].submenu[startSessionIndex].submenu.push({
+            label: item.name,
+            click: function() {
+              mainWindow.webContents.send('asynchronous-message', `start-session ${ item.id }`);
+              //sessionWindow.show();
+            }
+          });
         });
 
-        template[0].submenu[5].enabled = true;
-        template[0].submenu[6].enabled = true;
+        template[sessionsTemplateIndex].submenu[editIndex].enabled = true;
+        template[sessionsTemplateIndex].submenu[deleteIndex].enabled = true;
+        template[sessionsTemplateIndex].submenu[startSessionIndex].enabled = true;
       } else {
-        if (template[0].submenu[5].submenu) {
-          delete template[0].submenu[5].submenu;
+        if (template[sessionsTemplateIndex].submenu[editIndex].submenu) {
+          delete template[sessionsTemplateIndex].submenu[editIndex].submenu;
         }
 
-        if (template[0].submenu[6].submenu) {
-          delete template[0].submenu[6].submenu;
+        if (template[sessionsTemplateIndex].submenu[deleteIndex].submenu) {
+          delete template[sessionsTemplateIndex].submenu[deleteIndex].submenu;
         }
 
-        template[0].submenu[5].enabled = false;
-        template[0].submenu[6].enabled = false;
+        if (template[sessionsTemplateIndex].submenu[startSessionIndex].submenu) {
+          delete template[sessionsTemplateIndex].submenu[startSessionIndex].submenu;
+        }
+
+        template[sessionsTemplateIndex].submenu[editIndex].enabled = false;
+        template[sessionsTemplateIndex].submenu[deleteIndex].enabled = false;
+        template[sessionsTemplateIndex].submenu[startSessionIndex].enabled = false;
       }
 
       Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -264,25 +291,60 @@ function loadSessionMenus(callback) {
   });
 }
 
+function loadMenu() {
+  if (process.platform === 'darwin') {
+    const name = electron.app.getName();
+    template.unshift(
+      {
+        label: name,
+        submenu: [
+          {
+            label: `About ${ name }`,
+            role: 'about'
+          },
+          {
+            type: 'separator'
+          },
+          {
+            label: 'Quit',
+            accelerator: 'Command+Q',
+            click: function () {
+              app.quit();
+            }
+          }
+        ]
+      }
+    );
+  }
+}
+
 ipcMain.on('asynchronous-message', function(event, arg) {
   if (typeof arg === 'string') {
-    switch (arg) {
-      case 'target saved':
+    let tokens = arg.split(' ');
+    switch (tokens[0]) {
+      case 'target-saved':
         loadTargetMenus(function() {});
         targetWindow.hide();
+        mainWindow.webContents.send('asynchronous-message', `target-changed ${ tokens[1] }`);
         break;
 
-      case 'target cancelled':
+      case 'target-cancelled':
         targetWindow.hide();
         break;
 
-      case 'session saved':
+      case 'session-saved':
         loadSessionMenus(function() {});
+        sessionWindow.hide();
+        mainWindow.webContents.send('asynchronous-message', `session-changed ${ tokens[1] }`);
+        break;
+
+      case 'session-cancelled':
         sessionWindow.hide();
         break;
 
-      case 'session cancelled':
-        sessionWindow.hide();
+      case 'edit-session':
+        sessionWindow.webContents.send('asynchronous-message', tokens[1]);
+        sessionWindow.show();
         break;
 
       default:

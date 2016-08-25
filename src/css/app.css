@@ -1,0 +1,28 @@
+.panel {
+  max-width: 350px;
+}
+
+.panel-default>.panel-heading {
+  min-height: 40px;
+  background-color: lightgray;
+}
+
+.panel-title {
+  float: left;
+}
+
+.panel-heading-buttons {
+  float: right;
+  border: none;
+  background: none;
+}
+
+#editConfig:hover {
+  color: blue;
+  background: none;
+}
+
+#endSession:hover {
+  color: red;
+  background: none;
+}

@@ -2,7 +2,7 @@
   let module = angular.module('targetWindow', []);
   const ipcRenderer = require('electron').ipcRenderer;
   const nodeUuid = require('node-uuid');
-  const storage = require('electron').remote.require('./common/storage.js');
+  const storage = require('electron').remote.require('./utils/storage.js');
   const dialog = require('electron').remote.dialog;
 
   function TargetWindowController($scope) {
@@ -51,7 +51,12 @@
         properties: ['openFile']
       }, function(file) {
         if (file) {
-          $scope.target.keyfilePath = file;
+          if (Array.isArray(file)) {
+            $scope.target.keyfilePath = file[0];
+          } else {
+            $scope.target.keyfilePath = file;
+          }
+
           $scope.$apply();
         }
       });
@@ -59,12 +64,12 @@
 
     $scope.save = function() {
       storage.saveTarget($scope.target);
-      ipcRenderer.send('asynchronous-message', 'target saved');
+      ipcRenderer.send('asynchronous-message', `target-saved ${ $scope.target.id }`);
       $scope.target = {};
     }
 
     $scope.cancel = function() {
-      ipcRenderer.send('asynchronous-message', 'target cancelled');
+      ipcRenderer.send('asynchronous-message', 'target-cancelled');
       $scope.target = {};
     }
   }

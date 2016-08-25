@@ -2,23 +2,23 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title>Active Sessions</title>
+
+    <script src="../bower_components/angular/angular.min.js"></script>
+    <link rel="stylesheet" href="../bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../css/app.css">
   </head>
-  <body>
-    <h1>Hello World!</h1>
-    <!-- All of the Node.js APIs are available in this renderer process. -->
-    We are using node <script>document.write(process.versions.node)</script>,
-    Chromium <script>document.write(process.versions.chrome)</script>,
-    and Electron <script>document.write(process.versions.electron)</script>.
+  <body ng-controller="MainWindowController">
+    <h1>Active Sessions</h1>
+
+    <div id="sessionContainer"></div>
   </body>
 
-  <!--<script>
-    // You can also require other files to run in this process
-    //require('./renderer.js')
-    console.log(require('moment')());
+  <script src="../controllers/MainWindowController.js"></script>
+  <script>
+    angular.element(document)
+           .ready(function() {
+             angular.bootstrap(document.body, ['mainWindow']);
+           });
   </script>
-  <script src="https://code.angularjs.org/1.4.6/angular.min.js"></script>
-  <script src="https://code.angularjs.org/1.4.6/angular-route.min.js"></script>
-  <script src="app.js"></script>
-  <script src="Splarf.js"></script>-->
 </html>

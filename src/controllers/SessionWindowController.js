@@ -2,7 +2,7 @@
   let module = angular.module('sessionWindow', []);
   const ipcRenderer = require('electron').ipcRenderer;
   const nodeUuid = require('node-uuid');
-  const storage = require('electron').remote.require('./common/storage.js');
+  const storage = require('electron').remote.require('./utils/storage.js');
   const dialog = require('electron').remote.dialog;
 
   function SessionWindowController($scope) {
@@ -58,12 +58,12 @@
 
     $scope.save = function() {
       storage.saveSession($scope.session);
-      ipcRenderer.send('asynchronous-message', 'session saved');
+      ipcRenderer.send('asynchronous-message', `session-saved ${ $scope.session.id }`);
       $scope.session = {};
     }
 
     $scope.cancel = function() {
-      ipcRenderer.send('asynchronous-message', 'session cancelled');
+      ipcRenderer.send('asynchronous-message', 'session-cancelled');
       $scope.session = {};
     }
   }
