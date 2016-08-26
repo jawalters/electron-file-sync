@@ -94,41 +94,42 @@
           function link(scope, element, attrs) {
             let sync = require('../utils/sync.js');
 
-            scope.$watch('sessionConfig', function(newData, oldData) {
-              //console.log('mySession - new data', newData);
-              //console.log('mySession - old data', oldData);
-              if ((typeof newData === 'undefined') ||
-                  (newData === null) ||
-                  (typeof oldData === 'undefined') ||
-                  (oldData === null)) {
-                return;
-              }
-              if (oldData === newData) {
-                console.log('old data and new data are the same');
-              } else {
-                if ((newData.targetId !== oldData.targetId) ||
-                    (newData.target.host !== oldData.target.host) ||
-                    (newData.target.username !== oldData.target.username) ||
-                    (newData.target.password !== oldData.target.password) ||
-                    (newData.target.keyfilePath !== oldData.target.keyfilePath)) {
-                  sync.init(scope.sessionConfig, function() {
-                    console.log('sync initialized');
-                    sync.getRemoteFileList(function(err, fileList) {
-                      if (err) {
-                        console.log(err);
-                      } else {
-                        console.log(fileList);
-                      }
-                    });
-                  });
-                } else {
-                  // attn - reload the local and remote file lists?
-                }
-              }
-            }, true);
+            // scope.$watch('sessionConfig', function(newData, oldData) {
+            //   //console.log('mySession - new data', newData);
+            //   //console.log('mySession - old data', oldData);
+            //   if ((typeof newData === 'undefined') ||
+            //       (newData === null) ||
+            //       (typeof oldData === 'undefined') ||
+            //       (oldData === null)) {
+            //     return;
+            //   }
+            //   if (oldData === newData) {
+            //     console.log('old data and new data are the same');
+            //   } else {
+            //     if ((newData.targetId !== oldData.targetId) ||
+            //         (newData.target.host !== oldData.target.host) ||
+            //         (newData.target.username !== oldData.target.username) ||
+            //         (newData.target.password !== oldData.target.password) ||
+            //         (newData.target.keyfilePath !== oldData.target.keyfilePath)) {
+            //       sync.init(scope.sessionConfig, function() {
+            //         console.log('sync initialized');
+            //         sync.getRemoteFileList(function(err, fileList) {
+            //           if (err) {
+            //             console.log(err);
+            //           } else {
+            //             console.log(fileList);
+            //           }
+            //         });
+            //       });
+            //     } else {
+            //       // attn - reload the local and remote file lists?
+            //     }
+            //   }
+            // }, true);
 
             sync.init(scope.sessionConfig, function() {
               console.log('sync initialized');
+
               async.parallel(
                 [
                   function(parallelCallback) {
@@ -159,6 +160,9 @@
 
             scope.push = function() {
               console.log('push');
+              sync.generateListOfFilesToPush([], function(err, filesToPush) {
+                console.log(err, filesToPush);
+              });
             }
 
             scope.pull = function() {

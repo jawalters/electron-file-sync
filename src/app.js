@@ -19,7 +19,7 @@ let template = [
     submenu: [
       {
         label: 'New Target',
-        accelerator: (process.platform === 'darwin') ? 'Command+T' : undefined,
+        accelerator: 'CmdOrCtrl+T',
         click: function() {
           targetWindow.webContents.send('asynchronous-message', 'new target');
           targetWindow.show();
@@ -32,9 +32,6 @@ let template = [
       {
         label: 'Delete Target',
         enabled: false
-      },
-      {
-        type: 'separator'
       }
     ]
   },
@@ -43,7 +40,7 @@ let template = [
     submenu: [
       {
         label: 'New Session',
-        accelerator: (process.platform === 'darwin') ? 'Command+S' : undefined,
+        accelerator: 'CmdOrCtl+S',
         click: function() {
           sessionWindow.webContents.send('asynchronous-message', 'new session');
           sessionWindow.show();
@@ -296,7 +293,7 @@ function loadMenu() {
     const name = electron.app.getName();
     template.unshift(
       {
-        label: name,
+        label: 'File',
         submenu: [
           {
             label: `About ${ name }`,
@@ -307,8 +304,23 @@ function loadMenu() {
           },
           {
             label: 'Quit',
-            accelerator: 'Command+Q',
-            click: function () {
+            accelerator: 'CmdOrCtrl+Q',
+            click: function() {
+              app.quit();
+            }
+          }
+        ]
+      }
+    );
+  } else {
+    template.unshift(
+      {
+        label: 'File',
+        submenu: [
+          {
+            label: 'Quit',
+            accelerator: 'CmdOrCtrl+Q',
+            click: function() {
               app.quit();
             }
           }

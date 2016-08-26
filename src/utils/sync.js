@@ -9,7 +9,6 @@ const moment = require('moment');
 let conn = new Connection();
 let connectionEstablished = false;
 let sftpSession;
-let ignoreFileList;
 let syncSession;
 
 module.exports.init = function(session, callback) {
@@ -37,8 +36,6 @@ module.exports.init = function(session, callback) {
   conn.connect(options);
 
   conn.on('ready', function() {
-    //console.log('Connection ready');
-    //console.log();
     conn.sftp(function(err, sftp) {
       if (err) {
         console.log('error creating sftp:', err);
@@ -54,12 +51,14 @@ module.exports.init = function(session, callback) {
 };
 
 function readSyncIgnoreList(callback) {
+  let ignoreFileList = [];
   let contents = syncSession.fileIgnoreList;
+
   if (contents) {
     ignoreFileList = contents.trim().split('\n');
   }
 
-  callback(null);
+  callback(null, ignoreFileList);
 }
 
 function isFileIgnored(filepath, ignoreList) {
@@ -104,7 +103,7 @@ function isDirectory(modeFlags) {
   /* jshint bitwise: true */
 }
 
-function getRemoteFileListByDirectory(directoryPath, callback) {
+function getRemoteFileListByDirectory(directoryPath, ignoreFileList, callback) {
   let fileList = [];
 
   sftpSession.readdir(directoryPath, function(err, remoteDirList) {
@@ -169,17 +168,16 @@ function getRemoteFileListByDirectory(directoryPath, callback) {
 }
 
 module.exports.getRemoteFileList = function(callback) {
-  //let remoteFiles = [];
-
-  readSyncIgnoreList(function() {
-    getRemoteFileListByDirectory(syncSession.remotePath, function(err, fileList) {
-      //remoteFiles = fileList;
-      callback(err, fileList);
-    });
+  readSyncIgnoreList(function(err, ignoreFileList) {
+    if (err) {
+      callback(err);
+    } else {
+      getRemoteFileListByDirectory(syncSession.remotePath, ignoreFileList, callback);
+    }
   });
 };
 
-function getLocalFileListByDirectory(directoryPath, callback) {
+function getLocalFileListByDirectory(directoryPath, ignoreFileList, callback) {
   let fileList = [];
 
   fs.readdir(directoryPath, function(err, localDirList) {
@@ -217,7 +215,6 @@ function getLocalFileListByDirectory(directoryPath, callback) {
                 fileList.push(fileObj);
 
                 getLocalFileListByDirectory(directoryPath + '/' + localDir, function(err, returnedFiles) {
-                  //fileList = _.union(fileList, returnedFiles);
                   Array.prototype.push.apply(fileList, returnedFiles);
                   arrayCallback(null);
                 });
@@ -243,10 +240,229 @@ function getLocalFileListByDirectory(directoryPath, callback) {
 }
 
 module.exports.getLocalFileList = function(callback) {
-  //localFiles = [];
-
-  getLocalFileListByDirectory(syncSession.localPath, function(err, fileList) {
-    //localFiles = fileList;
-    callback(err, fileList);
+  readSyncIgnoreList(function(err, ignoreFileList) {
+    if (err) {
+      callback(err);
+    } else {
+      getLocalFileListByDirectory(syncSession.localPath, ignoreFileList, callback);
+    }
   });
 };
+
+module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
+  async.auto({
+    getIgnoreFileList: function(autoCallback) {
+      readSyncIgnoreList(autoCallback);
+    },
+    getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
+      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, autoCallback);
+    }],
+    getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
+      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, autoCallback);
+    }],
+    getListOfFilesToPush: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
+      let bFound;
+      let filesToPush = [];
+
+      for (let i = 0; i < results.getLocalFileList.length; ++i) {
+        if ((filterFiles.length === 0) || (filterFiles.indexOf(results.getLocalFileList[i].filename) !== -1)) {
+          bFound = false;
+
+          for (let j = 0; j < results.getRemoteFileList.length; ++j) {
+            if (results.getLocalFileList[i].filename === results.getRemoteFileList[j].filename) {
+              bFound = true;
+
+              if (results.getLocalFileList[i].attrs.isFile()) {
+                if (results.getLocalFileList[i].attrs.modifiedUnix > results.getRemoteFileList[j].attrs.modifiedUnix) {
+                  filesToPush.push(results.getLocalFileList[i].filename);
+                }
+              }
+
+              break;
+            }
+          }
+
+          if (bFound === false) {
+            filesToPush.push(results.getLocalFileList[i].filename);
+          }
+        }
+      }
+
+      autoCallback(null, filesToPush);
+    }]
+  },
+  function(err, results) {
+    if (err) {
+      callback(err);
+    } else {
+      callback(null, results.getListOfFilesToPush);
+    }
+  });
+};
+
+// function generateListOfFilesToPull(localFilesList, remoteFilesList, args, callback) {
+//   let i;
+//   let j;
+//   let bFound;
+//   let filesToPull = [];
+
+//   //console.log('Files to pull: ');
+
+//   for (i = 0; i < remoteFilesList.length; ++i) {
+//     if ((args.length === 0) || (args.indexOf(remoteFilesList[i].filename) !== -1)) {
+//       bFound = false;
+
+//       for (j = 0; j < localFilesList.length; ++j) {
+//         if (remoteFilesList[i].filename === localFilesList[j].filename) {
+//           bFound = true;
+
+//           if (isFile(remoteFilesList[i].attrs.mode)) {
+//             if (remoteFilesList[i].attrs.modifiedUnix > localFilesList[j].attrs.modifiedUnix) {
+//               //displayFileInfo(localFilesList[j], remoteFilesList[i], filesToPull.length);
+
+//               filesToPull.push(remoteFilesList[i].filename);
+//             }
+//           }
+
+//           break;
+//         }
+//       }
+
+//       if (bFound === false) {
+//         //displayFileInfo(localFilesList[j], remoteFilesList[i], filesToPull.length);
+
+//         filesToPull.push(remoteFilesList[i].filename);
+//       }
+//     }
+//   }
+
+  /*if (filesToPull.length) {
+    console.log();
+  } else {
+    console.log('  No files to pull');
+    console.log();
+  }*/
+
+//   callback(null, filesToPull);
+// }
+
+// function setLocalFileModificationTime(filename, callback) {
+//   for (let i = 0; i < remoteFiles.length; ++i) {
+//     if (remoteFiles[i].filename === filename) {
+//       fs.utimes(syncSession.localPath + '/' + filename,
+//                 remoteFiles[i].attrs.mtime,
+//                 remoteFiles[i].attrs.mtime,
+//                 callback);
+//       return;
+//     }
+//   }
+
+//   callback(null);
+// }
+
+// function setRemoteFileModificationTime(filename, callback) {
+//   for (let i = 0; i < localFiles.length; ++i) {
+//     if (localFiles[i].filename === filename) {
+//       sftpSession.utimes(syncSession.remotePath + '/' + filename,
+//                          localFiles[i].attrs.mtime,
+//                          localFiles[i].attrs.mtime,
+//                          callback);
+//       return;
+//     }
+//   }
+
+//   callback(null);
+// }
+
+// function pushFiles(filesToPush, callback) {
+//   if (filesToPush.length) {
+//     console.log('Pushing file(s)');
+
+//     async.eachSeries(filesToPush, function(file, arrayCallback) {
+//       console.log('  Pushing %s', file);
+
+//       for (let i = 0; i < localFiles.length; ++i) {
+//         if (localFiles[i].filename === file) {
+//           if (localFiles[i].attrs.isFile()) {
+//             sftpSession.fastPut(syncSession.localPath + '/' + file,
+//                                 syncSession.remotePath + '/' + file,
+//                                 function() {
+//                                   setRemoteFileModificationTime(file, arrayCallback);
+//                                 });
+//           }
+//           else {
+//             if (localFiles[i].attrs.isDirectory()) {
+//               sftpSession.mkdir(syncSession.remotePath + '/' + file,
+//                                 function() {
+//                                   arrayCallback(null);
+//                                 });
+//             } else {
+//               arrayCallback(null);
+//             }
+//           }
+
+//           break;
+//         }
+//       }
+//     },
+//     function(err) {
+//       if (err) {
+//         console.log('async.eachSeries error:', err);
+//         callback(err);
+//       } else {
+//         callback(null);
+//       }
+//     });
+//   } else {
+//     callback(null);
+//   }
+// }
+
+// function pullFiles(filesToPull, callback) {
+//   if (filesToPull.length) {
+//     console.log('Pulling file(s)');
+
+//     async.eachSeries(filesToPull, function(file, arrayCallback) {
+//       console.log('  Pulling %s', file);
+
+//       for (let i = 0; i < remoteFiles.length; ++i) {
+//         if (remoteFiles[i].filename === file) {
+//           if (isFile(remoteFiles[i].attrs.mode)) {
+//             sftpSession.fastGet(syncSession.remotePath + '/' + file,
+//                                 syncSession.localPath + '/' + file,
+//                                 function() {
+//                                   setLocalFileModificationTime(file, arrayCallback);
+//                                 });
+//           } else {
+//             if (isDirectory(remoteFiles[i].attrs.mode)) {
+//               fs.mkdirSync(cfgLocalPath + '/' + file);
+//             }
+
+//             arrayCallback(null);
+//           }
+
+//           break;
+//         }
+//       }
+//     },
+//     function(err) {
+//       if (err) {
+//         console.log('async.eachSeries error:', err);
+//         callback(err);
+//       } else {
+//         callback(null);
+//       }
+//     });
+//   } else {
+//     callback(null);
+//   }
+// }
+
+//module.exports.pushFiles = function(filterFiles, callback) {
+  // get the file ignore list
+  // get the local file list (future: optimize with filterFiles, don't need to stat or traverse any directories not specified')
+  // get the remote file list (future: optimize with filterFiles, don't need to stat or traverse any directories not specified')
+  // diff the file lists to come up with files to push
+  // push the files
+
+//};
