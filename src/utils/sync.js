@@ -27,7 +27,7 @@ module.exports.init = function(session, callback) {
     readyTimeout: 99999
   };
 
-  if (session.target.keyfilePath !== null) {
+  if (session.target.keyfilePath !== '') {
     options.privateKey = fs.readFileSync(session.target.keyfilePath);
   } else {
     options.password = session.target.password;
@@ -274,7 +274,7 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
 
               if (results.getLocalFileList[i].attrs.isFile()) {
                 if (results.getLocalFileList[i].attrs.modifiedUnix > results.getRemoteFileList[j].attrs.modifiedUnix) {
-                  filesToPush.push(results.getLocalFileList[i].filename);
+                  filesToPush.push(results.getLocalFileList[i]);
                 }
               }
 
@@ -283,7 +283,7 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
           }
 
           if (bFound === false) {
-            filesToPush.push(results.getLocalFileList[i].filename);
+            filesToPush.push(results.getLocalFileList[i]);
           }
         }
       }
@@ -298,6 +298,59 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
       callback(null, results.getListOfFilesToPush);
     }
   });
+};
+
+function setRemoteFileModificationTime(filename, modTime, callback) {
+  sftpSession.utimes(syncSession.remotePath + '/' + filename,
+                     modTime,
+                     modTime,
+                     callback);
+}
+
+module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
+  if (filesToPush.length) {
+    let total = filesToPush.reduce(function(previousValue, file) {
+      return previousValue + file.attrs.size;
+    }, 0);
+    let bytesTransferred = 0;
+
+    async.eachSeries(filesToPush, function(file, arrayCallback) {
+      if (file.attrs.isFile()) {
+        sftpSession.fastPut(
+          syncSession.localPath + '/' + file.filename,
+          syncSession.remotePath + '/' + file.filename,
+          {
+            step: function(bytesTransferredForFile, chunk, totalForFile) {
+              bytesTransferred += chunk;
+              stepFunction(file.filename, bytesTransferred, total);
+            }
+          },
+          function() {
+            setRemoteFileModificationTime(file.filename, file.attrs.mtime, arrayCallback);
+          });
+      } else {
+        if (file.attrs.isDirectory()) {
+          sftpSession.mkdir(
+            syncSession.remotePath + '/' + file.filename,
+            function() {
+              arrayCallback(null);
+            });
+        } else {
+          arrayCallback(null);
+        }
+      }
+    },
+    function(err) {
+      if (err) {
+        console.log('async.eachSeries error:', err);
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
+  } else {
+    callback(null);
+  }
 };
 
 // function generateListOfFilesToPull(localFilesList, remoteFilesList, args, callback) {
@@ -360,64 +413,6 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
 //   callback(null);
 // }
 
-// function setRemoteFileModificationTime(filename, callback) {
-//   for (let i = 0; i < localFiles.length; ++i) {
-//     if (localFiles[i].filename === filename) {
-//       sftpSession.utimes(syncSession.remotePath + '/' + filename,
-//                          localFiles[i].attrs.mtime,
-//                          localFiles[i].attrs.mtime,
-//                          callback);
-//       return;
-//     }
-//   }
-
-//   callback(null);
-// }
-
-// function pushFiles(filesToPush, callback) {
-//   if (filesToPush.length) {
-//     console.log('Pushing file(s)');
-
-//     async.eachSeries(filesToPush, function(file, arrayCallback) {
-//       console.log('  Pushing %s', file);
-
-//       for (let i = 0; i < localFiles.length; ++i) {
-//         if (localFiles[i].filename === file) {
-//           if (localFiles[i].attrs.isFile()) {
-//             sftpSession.fastPut(syncSession.localPath + '/' + file,
-//                                 syncSession.remotePath + '/' + file,
-//                                 function() {
-//                                   setRemoteFileModificationTime(file, arrayCallback);
-//                                 });
-//           }
-//           else {
-//             if (localFiles[i].attrs.isDirectory()) {
-//               sftpSession.mkdir(syncSession.remotePath + '/' + file,
-//                                 function() {
-//                                   arrayCallback(null);
-//                                 });
-//             } else {
-//               arrayCallback(null);
-//             }
-//           }
-
-//           break;
-//         }
-//       }
-//     },
-//     function(err) {
-//       if (err) {
-//         console.log('async.eachSeries error:', err);
-//         callback(err);
-//       } else {
-//         callback(null);
-//       }
-//     });
-//   } else {
-//     callback(null);
-//   }
-// }
-
 // function pullFiles(filesToPull, callback) {
 //   if (filesToPull.length) {
 //     console.log('Pulling file(s)');
@@ -457,12 +452,3 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
 //     callback(null);
 //   }
 // }
-
-//module.exports.pushFiles = function(filterFiles, callback) {
-  // get the file ignore list
-  // get the local file list (future: optimize with filterFiles, don't need to stat or traverse any directories not specified')
-  // get the remote file list (future: optimize with filterFiles, don't need to stat or traverse any directories not specified')
-  // diff the file lists to come up with files to push
-  // push the files
-
-//};

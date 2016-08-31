@@ -127,8 +127,13 @@
             //   }
             // }, true);
 
+            scope.status = 'Connecting...';
+            scope.showProgress = false;
+
             sync.init(scope.sessionConfig, function() {
               console.log('sync initialized');
+              scope.status = 'Ready';
+              scope.$apply();
 
               async.parallel(
                 [
@@ -138,7 +143,6 @@
                         console.log(err);
                         parallelCallback(err);
                       } else {
-                        console.log(fileList);
                         parallelCallback(null);
                       }
                     });
@@ -149,7 +153,6 @@
                         console.log(err);
                         parallelCallback(err);
                       } else {
-                        console.log(fileList);
                         parallelCallback(null);
                       }
                     });
@@ -158,18 +161,60 @@
               );
             });
 
-            scope.push = function() {
-              console.log('push');
+            scope.selectAll = function() {
+              for (let i = 0; i < scope.files.length; ++i) {
+                scope.files[i].send = scope.selectall;
+              }
+            };
+
+            scope.getListOfFilesToPush = function() {
+              scope.push = true;
+
               sync.generateListOfFilesToPush([], function(err, filesToPush) {
-                console.log(err, filesToPush);
+                scope.selectall = true;
+
+                scope.files = filesToPush;
+                for (let i = 0; i < scope.files.length; ++i) {
+                  scope.files[i].send = true;
+                }
+                scope.$apply();
               });
-            }
+            };
 
             scope.pull = function() {
               console.log('pull');
-            }
+            };
 
+            scope.pushFiles = function(files) {
+              let filesToPush = files.filter(function(file) {
+                return file.send;
+              });
 
+              scope.showProgress = true;
+              scope.progress = 0;
+              scope.progressStyle = { width: '0%' };
+              sync.pushFiles(
+                filesToPush,
+                function(filename, totalTransferred, total) {
+                  scope.status = `Sending ${ filename }`;
+                  scope.progress = Math.floor((totalTransferred / total) * 100);
+                  scope.progressStyle = { width: `${ scope.progress }%` };
+                  scope.$apply();
+                },
+                function() {
+                  setTimeout(function() {
+                    scope.status = 'Transfer complete';
+                    scope.$apply();
+                  }, 500);
+
+                  setTimeout(function() {
+                    scope.status = 'Ready';
+                    scope.showProgress = false;
+                    scope.$apply();
+                  }, 5000);
+                }
+              );
+            };
           }
 
           return {

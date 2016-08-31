@@ -40,7 +40,7 @@ let template = [
     submenu: [
       {
         label: 'New Session',
-        accelerator: 'CmdOrCtl+S',
+        accelerator: 'CmdOrCtrl+S',
         click: function() {
           sessionWindow.webContents.send('asynchronous-message', 'new session');
           sessionWindow.show();
@@ -74,6 +74,7 @@ function createMainWindow() {
 
   mainWindow.on('closed', function() {
     mainWindow = null;
+    app.quit();
   });
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

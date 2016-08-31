@@ -9,7 +9,53 @@
     </button>
   </div>
   <div class="panel-body">
-    <button type="button" class="btn btn-default" id="push" ng-click="push()">Push</button><br>
+    <button type="button" class="btn btn-default" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">Push</button><br>
     <button type="button" class="btn btn-default" id="pull" ng-click="pull()">Pull</button>
+  </div>
+  <div class="panel-footer">
+    <span id="(( sessionConfig.id }}_status">{{ status }}</span>
+    <span id="{{ sessionConfig.id }}_progress">
+      <div class="progress" ng-show="showProgress">
+        <div class="progress-bar" role="progress" ng-style="progressStyle"></div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="modal fade" id="{{ sessionConfig.id }}_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="{{ sessionConfig.id }}_myModalLabel">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h4>
+      </div>
+      <div class="modal-body">
+
+        <table id="{{ sessionConfig.id }}_confirmTable" class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th><input type="checkbox" ng-model="selectall" ng-change="selectAll();" /></th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr ng-repeat="file in files">
+              <td>
+                <input type="checkbox" ng-model="file.send" />
+              </td>
+              <td>{{ file.filename }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-show="push" ng-click="pushFiles(files)">Push Files</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-hide="push" ng-click="pullFiles(files)">Pull Files</button>
+      </div>
+    </div>
   </div>
 </div>
