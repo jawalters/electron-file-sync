@@ -181,10 +181,6 @@
               });
             };
 
-            scope.pull = function() {
-              console.log('pull');
-            };
-
             scope.pushFiles = function(files) {
               let filesToPush = files.filter(function(file) {
                 return file.send;
@@ -196,7 +192,52 @@
               sync.pushFiles(
                 filesToPush,
                 function(filename, totalTransferred, total) {
-                  scope.status = `Sending ${ filename }`;
+                  scope.status = `Transferring ${ filename }`;
+                  scope.progress = Math.floor((totalTransferred / total) * 100);
+                  scope.progressStyle = { width: `${ scope.progress }%` };
+                  scope.$apply();
+                },
+                function() {
+                  setTimeout(function() {
+                    scope.status = 'Transfer complete';
+                    scope.$apply();
+                  }, 500);
+
+                  setTimeout(function() {
+                    scope.status = 'Ready';
+                    scope.showProgress = false;
+                    scope.$apply();
+                  }, 5000);
+                }
+              );
+            };
+
+            scope.getListOfFilesToPull = function() {
+              scope.push = false;
+
+              sync.generateListOfFilesToPull([], function(err, filesToPull) {
+                scope.selectall = true;
+
+                scope.files = filesToPull;
+                for (let i = 0; i < scope.files.length; ++i) {
+                  scope.files[i].send = true;
+                }
+                scope.$apply();
+              });
+            };
+
+            scope.pullFiles = function(files) {
+              let filesToPull = files.filter(function(file) {
+                return file.send;
+              });
+
+              scope.showProgress = true;
+              scope.progress = 0;
+              scope.progressStyle = { width: '0%' };
+              sync.pullFiles(
+                filesToPull,
+                function(filename, totalTransferred, total) {
+                  scope.status = `Transferring ${ filename }`;
                   scope.progress = Math.floor((totalTransferred / total) * 100);
                   scope.progressStyle = { width: `${ scope.progress }%` };
                   scope.$apply();

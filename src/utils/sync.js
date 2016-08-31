@@ -353,102 +353,102 @@ module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
   }
 };
 
-// function generateListOfFilesToPull(localFilesList, remoteFilesList, args, callback) {
-//   let i;
-//   let j;
-//   let bFound;
-//   let filesToPull = [];
+module.exports.generateListOfFilesToPull = function(filterFiles, callback) {
+  async.auto({
+    getIgnoreFileList: function(autoCallback) {
+      readSyncIgnoreList(autoCallback);
+    },
+    getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
+      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, autoCallback);
+    }],
+    getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
+      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, autoCallback);
+    }],
+    getListOfFilesToPull: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
+      let bFound;
+      let filesToPull = [];
 
-//   //console.log('Files to pull: ');
+      for (let i = 0; i < results.getRemoteFileList.length; ++i) {
+        if ((filterFiles.length === 0) || (filterFiles.indexOf(results.getRemoteFileList[i].filename) !== -1)) {
+          bFound = false;
 
-//   for (i = 0; i < remoteFilesList.length; ++i) {
-//     if ((args.length === 0) || (args.indexOf(remoteFilesList[i].filename) !== -1)) {
-//       bFound = false;
+          for (let j = 0; j < results.getLocalFileList.length; ++j) {
+            if (results.getRemoteFileList[i].filename === results.getLocalFileList[j].filename) {
+              bFound = true;
 
-//       for (j = 0; j < localFilesList.length; ++j) {
-//         if (remoteFilesList[i].filename === localFilesList[j].filename) {
-//           bFound = true;
+              if (isFile(results.getRemoteFileList[i].attrs.mode)) {
+                if (results.getRemoteFileList[i].attrs.modifiedUnix > results.getLocalFileList[j].attrs.modifiedUnix) {
+                  filesToPull.push(results.getRemoteFileList[i]);
+                }
+              }
 
-//           if (isFile(remoteFilesList[i].attrs.mode)) {
-//             if (remoteFilesList[i].attrs.modifiedUnix > localFilesList[j].attrs.modifiedUnix) {
-//               //displayFileInfo(localFilesList[j], remoteFilesList[i], filesToPull.length);
+              break;
+            }
+          }
 
-//               filesToPull.push(remoteFilesList[i].filename);
-//             }
-//           }
+          if (bFound === false) {
+            filesToPull.push(results.getRemoteFileList[i]);
+          }
+        }
+      }
 
-//           break;
-//         }
-//       }
+      autoCallback(null, filesToPull);
+    }]
+  },
+  function(err, results) {
+    if (err) {
+      callback(err);
+    } else {
+      callback(null, results.getListOfFilesToPull);
+    }
+  });
+};
 
-//       if (bFound === false) {
-//         //displayFileInfo(localFilesList[j], remoteFilesList[i], filesToPull.length);
+function setLocalFileModificationTime(filename, modTime, callback) {
+  fs.utimes(syncSession.localPath + '/' + filename,
+            modTime,
+            modTime,
+            callback);
+}
 
-//         filesToPull.push(remoteFilesList[i].filename);
-//       }
-//     }
-//   }
+module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
+  if (filesToPull.length) {
+    let total = filesToPull.reduce(function(previousValue, file) {
+      return previousValue + file.attrs.size;
+    }, 0);
+    let bytesTransferred = 0;
 
-  /*if (filesToPull.length) {
-    console.log();
+    async.eachSeries(filesToPull, function(file, arrayCallback) {
+      if (isFile(file.attrs.mode)) {
+        sftpSession.fastGet(
+          syncSession.remotePath + '/' + file.filename,
+          syncSession.localPath + '/' + file.filename,
+          {
+            step: function(bytesTransferredForFile, chunk, totalForFile) {
+              bytesTransferred += chunk;
+              stepFunction(file.filename, bytesTransferred, total);
+            }
+          },
+          function() {
+            setLocalFileModificationTime(file.filename, file.attrs.mtime, arrayCallback);
+          });
+      } else {
+        if (isDirectory(file.attrs.mode)) {
+          fs.mkdirSync(syncSession.localPath + '/' + file.filename);
+        }
+
+        arrayCallback(null);
+      }
+    },
+    function(err) {
+      if (err) {
+        console.log('async.eachSeries error:', err);
+        callback(err);
+      } else {
+        callback(null);
+      }
+    });
   } else {
-    console.log('  No files to pull');
-    console.log();
-  }*/
-
-//   callback(null, filesToPull);
-// }
-
-// function setLocalFileModificationTime(filename, callback) {
-//   for (let i = 0; i < remoteFiles.length; ++i) {
-//     if (remoteFiles[i].filename === filename) {
-//       fs.utimes(syncSession.localPath + '/' + filename,
-//                 remoteFiles[i].attrs.mtime,
-//                 remoteFiles[i].attrs.mtime,
-//                 callback);
-//       return;
-//     }
-//   }
-
-//   callback(null);
-// }
-
-// function pullFiles(filesToPull, callback) {
-//   if (filesToPull.length) {
-//     console.log('Pulling file(s)');
-
-//     async.eachSeries(filesToPull, function(file, arrayCallback) {
-//       console.log('  Pulling %s', file);
-
-//       for (let i = 0; i < remoteFiles.length; ++i) {
-//         if (remoteFiles[i].filename === file) {
-//           if (isFile(remoteFiles[i].attrs.mode)) {
-//             sftpSession.fastGet(syncSession.remotePath + '/' + file,
-//                                 syncSession.localPath + '/' + file,
-//                                 function() {
-//                                   setLocalFileModificationTime(file, arrayCallback);
-//                                 });
-//           } else {
-//             if (isDirectory(remoteFiles[i].attrs.mode)) {
-//               fs.mkdirSync(cfgLocalPath + '/' + file);
-//             }
-
-//             arrayCallback(null);
-//           }
-
-//           break;
-//         }
-//       }
-//     },
-//     function(err) {
-//       if (err) {
-//         console.log('async.eachSeries error:', err);
-//         callback(err);
-//       } else {
-//         callback(null);
-//       }
-//     });
-//   } else {
-//     callback(null);
-//   }
-// }
+    callback(null);
+  }
+};

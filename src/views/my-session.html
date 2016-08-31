@@ -10,7 +10,7 @@
   </div>
   <div class="panel-body">
     <button type="button" class="btn btn-default" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">Push</button><br>
-    <button type="button" class="btn btn-default" id="pull" ng-click="pull()">Pull</button>
+    <button type="button" class="btn btn-default" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull()" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">Pull</button>
   </div>
   <div class="panel-footer">
     <span id="(( sessionConfig.id }}_status">{{ status }}</span>
@@ -53,8 +53,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-show="push" ng-click="pushFiles(files)">Push Files</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-hide="push" ng-click="pullFiles(files)">Pull Files</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-show="push" ng-click="pushFiles(files);">Push Files</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-hide="push" ng-click="pullFiles(files);">Pull Files</button>
       </div>
     </div>
   </div>
