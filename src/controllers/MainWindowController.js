@@ -1,5 +1,5 @@
 (function() {
-  let module = angular.module('mainWindow', []);
+  let module = angular.module('mainWindow', ['treeControl']);
   const ipcRenderer = require('electron').ipcRenderer;
   //const nodeUuid = require('node-uuid');
   const storage = require('electron').remote.require('./utils/storage.js');
@@ -90,51 +90,78 @@
   }
 
   module.controller('MainWindowController', MainWindowController)
-        .directive('mySession', function() {
+        .directive('mySession', function($timeout) {
           function link(scope, element, attrs) {
             let sync = require('../utils/sync.js');
 
-            // scope.$watch('sessionConfig', function(newData, oldData) {
-            //   //console.log('mySession - new data', newData);
-            //   //console.log('mySession - old data', oldData);
-            //   if ((typeof newData === 'undefined') ||
-            //       (newData === null) ||
-            //       (typeof oldData === 'undefined') ||
-            //       (oldData === null)) {
-            //     return;
-            //   }
-            //   if (oldData === newData) {
-            //     console.log('old data and new data are the same');
-            //   } else {
-            //     if ((newData.targetId !== oldData.targetId) ||
-            //         (newData.target.host !== oldData.target.host) ||
-            //         (newData.target.username !== oldData.target.username) ||
-            //         (newData.target.password !== oldData.target.password) ||
-            //         (newData.target.keyfilePath !== oldData.target.keyfilePath)) {
-            //       sync.init(scope.sessionConfig, function() {
-            //         console.log('sync initialized');
-            //         sync.getRemoteFileList(function(err, fileList) {
-            //           if (err) {
-            //             console.log(err);
-            //           } else {
-            //             console.log(fileList);
-            //           }
-            //         });
-            //       });
-            //     } else {
-            //       // attn - reload the local and remote file lists?
-            //     }
-            //   }
-            // }, true);
+            let localFilterFiles = new Set();
+            let remoteFilterFiles = new Set();
+
+            scope.$watch('sessionConfig', function(newData, oldData) {
+              if ((typeof newData === 'undefined') ||
+                  (newData === null) ||
+                  (typeof oldData === 'undefined') ||
+                  (oldData === null)) {
+                return;
+              }
+              if (oldData !== newData) {
+                if ((newData.targetId !== oldData.targetId) ||
+                    (newData.target.host !== oldData.target.host) ||
+                    (newData.target.username !== oldData.target.username) ||
+                    (newData.target.password !== oldData.target.password) ||
+                    (newData.target.keyfilePath !== oldData.target.keyfilePath)) {
+                  sync.init(scope.sessionConfig, function() {
+                    console.log('sync initialized');
+                    sync.getRemoteFileList(function(err, fileList) {
+                      if (err) {
+                        console.log(err);
+                      } else {
+                        console.log(fileList);
+                      }
+                    });
+                  });
+                } else {
+                  getFileLists();
+                }
+              }
+            }, true);
 
             scope.status = 'Connecting...';
             scope.showProgress = false;
 
-            sync.init(scope.sessionConfig, function() {
-              console.log('sync initialized');
-              scope.status = 'Ready';
-              scope.$apply();
+            scope.treeOptions = {
+              multiSelection: true,
+              nodeChildren: "children",
+              dirSelectable: true,
+              injectClasses: {
+                ul: "a1",
+                li: "a2",
+                liSelected: "a7",
+                iExpanded: "a3",
+                iCollapsed: "a4",
+                iLeaf: "a5",
+                label: "a6",
+                labelSelected: "a8"
+              }
+            };
 
+            scope.selectLocalFilterFile = function(node, selected) {
+              if (selected) {
+                localFilterFiles.add(node.filename);
+              } else {
+                localFilterFiles.delete(node.filename);
+              }
+            };
+
+            scope.selectRemoteFilterFile = function(node, selected) {
+              if (selected) {
+                remoteFilterFiles.add(node.filename);
+              } else {
+                remoteFilterFiles.delete(node.filename);
+              }
+            };
+
+            function getFileLists() {
               async.parallel(
                 [
                   function(parallelCallback) {
@@ -143,6 +170,8 @@
                         console.log(err);
                         parallelCallback(err);
                       } else {
+                        scope.localFileList = fileList;
+                        scope.$apply();
                         parallelCallback(null);
                       }
                     });
@@ -153,12 +182,22 @@
                         console.log(err);
                         parallelCallback(err);
                       } else {
+                        scope.remoteFileList = fileList;
+                        scope.$apply();
                         parallelCallback(null);
                       }
                     });
                   }
                 ]
               );
+            }
+
+            sync.init(scope.sessionConfig, function() {
+              console.log('sync initialized');
+              scope.status = 'Ready';
+              scope.$apply();
+
+              getFileLists();
             });
 
             scope.selectAll = function() {
@@ -170,7 +209,7 @@
             scope.getListOfFilesToPush = function() {
               scope.push = true;
 
-              sync.generateListOfFilesToPush([], function(err, filesToPush) {
+              sync.generateListOfFilesToPush(localFilterFiles, function(err, filesToPush) {
                 scope.selectall = true;
 
                 scope.files = filesToPush;
@@ -198,16 +237,25 @@
                   scope.$apply();
                 },
                 function() {
-                  setTimeout(function() {
+                  $timeout(function() {
                     scope.status = 'Transfer complete';
-                    scope.$apply();
+                    scope.progress = 100;
+                    scope.progressStyle = { width: '100%' };
                   }, 500);
 
-                  setTimeout(function() {
+                  $timeout(function() {
                     scope.status = 'Ready';
                     scope.showProgress = false;
-                    scope.$apply();
                   }, 5000);
+
+                  sync.getRemoteFileList(function(err, fileList) {
+                    if (err) {
+                      console.log(err);
+                    } else {
+                      scope.remoteFileList = fileList;
+                      scope.$apply();
+                    }
+                  });
                 }
               );
             };
@@ -215,7 +263,7 @@
             scope.getListOfFilesToPull = function() {
               scope.push = false;
 
-              sync.generateListOfFilesToPull([], function(err, filesToPull) {
+              sync.generateListOfFilesToPull(remoteFilterFiles, function(err, filesToPull) {
                 scope.selectall = true;
 
                 scope.files = filesToPull;
@@ -243,19 +291,34 @@
                   scope.$apply();
                 },
                 function() {
-                  setTimeout(function() {
+                  $timeout(function() {
                     scope.status = 'Transfer complete';
-                    scope.$apply();
+                    scope.progress = 100;
+                    scope.progressStyle = { width: '100%' };
                   }, 500);
 
-                  setTimeout(function() {
+                  $timeout(function() {
                     scope.status = 'Ready';
                     scope.showProgress = false;
-                    scope.$apply();
                   }, 5000);
+
+                  sync.getLocalFileList(function(err, fileList) {
+                    if (err) {
+                      console.log(err);
+                    } else {
+                      scope.localFileList = fileList;
+                      scope.$apply();
+                    }
+                  });
                 }
               );
             };
+
+            $timeout(function() {
+              document.getElementById(`${ scope.sessionConfig.id }_refresh`).addEventListener('click', function() {
+                getFileLists();
+              });
+            });
           }
 
           return {

@@ -1,5 +1,5 @@
 .panel {
-  max-width: 350px;
+  max-width: 600px;
 }
 
 .panel-default>.panel-heading {
@@ -17,12 +17,25 @@
   background: none;
 }
 
-#editConfig:hover {
+.editConfig:hover {
   color: blue;
   background: none;
 }
 
-#endSession:hover {
+.endSession:hover {
   color: red;
   background: none;
+}
+
+.refresh:hover {
+  color: green;
+  background: none;
+}
+
+.buttons-column {
+  text-align: center;
+}
+
+.push-pull-buttons {
+  margin-top: 15px;
 }

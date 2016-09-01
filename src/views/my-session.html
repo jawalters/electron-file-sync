@@ -1,16 +1,62 @@
 <div class="panel panel-default">
   <div class="panel-heading">
     <h3 class="panel-title">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h3>
-    <button type="button" class="btn btn-default btn-xs panel-heading-buttons" id="endSession" ng-click="endSession(sessionConfig.id)" onclick="this.blur();">
+    <button type="button" class="btn btn-default btn-xs panel-heading-buttons endSession" id="{{ sessionConfig.id }}_endSession" ng-click="endSession(sessionConfig.id)" onclick="this.blur();">
       <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
     </button>
-    <button type="button" class="btn btn-default btn-xs panel-heading-buttons" id="editConfig" ng-click="editSession(sessionConfig.id)" onclick="this.blur();">
+    <button type="button" class="btn btn-default btn-xs panel-heading-buttons editConfig" id="{{ sessionConfig.id }}_editConfig" ng-click="editSession(sessionConfig.id)" onclick="this.blur();">
       <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
     </button>
+    <button type="button" class="btn btn-default btn-xs panel-heading-buttons refresh" id="{{ sessionConfig.id }}_refresh" onclick="this.blur();">
+      <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+    </button>
   </div>
-  <div class="panel-body">
-    <button type="button" class="btn btn-default" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">Push</button><br>
-    <button type="button" class="btn btn-default" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull()" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">Pull</button>
+
+  <div class="panel-body container-fluid">
+    <div class="row">
+      <div class="col-xs-5">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h2 class="panel-title">Local Files</h2>
+          </div>
+          <div class="panel-body">
+            <treecontrol class="tree-classic"
+              tree-model="localFileList"
+              options="treeOptions"
+              on-selection="selectLocalFilterFile(node, selected)"
+              selected-node="node1">
+              {{ node.shortname }}
+            </treecontrol>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xs-2 buttons-column">
+        <button type="button" class="btn btn-default push-pull-buttons" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">
+          <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span>
+        </button><br>
+        <button type="button" class="btn btn-default push-pull-buttons" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull()" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">
+          <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="col-xs-5">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h2 class="panel-title">Remote Files</h2>
+          </div>
+          <div class="panel-body">
+            <treecontrol class="tree-classic"
+              tree-model="remoteFileList"
+              options="treeOptions"
+              on-selection="selectRemoteFilterFile(node, selected)"
+              selected-node="node1">
+              {{ node.shortname }}
+            </treecontrol>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="panel-footer">
     <span id="(( sessionConfig.id }}_status">{{ status }}</span>

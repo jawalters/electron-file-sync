@@ -103,7 +103,7 @@ function isDirectory(modeFlags) {
   /* jshint bitwise: true */
 }
 
-function getRemoteFileListByDirectory(directoryPath, ignoreFileList, callback) {
+function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, callback) {
   let fileList = [];
 
   sftpSession.readdir(directoryPath, function(err, remoteDirList) {
@@ -125,6 +125,7 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, callback) {
               filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
               tokens = filePath.split('\\');
               fileObj.filename = tokens.join('/');
+              fileObj.shortname = remoteDir.filename;
               fileObj.attrs = remoteDir.attrs;
               fileObj.attrs.modifiedUnix = remoteDir.attrs.mtime;
               fileList.push(fileObj);
@@ -138,12 +139,17 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, callback) {
                 filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
                 tokens = filePath.split('\\');
                 fileObj.filename = tokens.join('/');
+                fileObj.shortname = remoteDir.filename;
                 fileObj.attrs = remoteDir.attrs;
                 fileObj.attrs.modifiedUnix = remoteDir.attrs.mtime;
                 fileList.push(fileObj);
 
-                getRemoteFileListByDirectory(directoryPath + '/' + remoteDir.filename, function(err, returnedFiles) {
-                  Array.prototype.push.apply(fileList, returnedFiles);
+                getRemoteFileListByDirectory(directoryPath + '/' + remoteDir.filename, ignoreFileList, nested, function(err, returnedFiles) {
+                  if (nested) {
+                    fileObj.children = returnedFiles;
+                  } else {
+                    Array.prototype.push.apply(fileList, returnedFiles);
+                  }
                   arrayCallback(null);
                 });
               } else {
@@ -159,6 +165,18 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, callback) {
             console.log('async.eachSeries error:', err);
             callback(err);
           } else {
+            fileList.sort(function(file1, file2) {
+              let file1name = file1.filename.toUpperCase();
+              let file2name = file2.filename.toUpperCase();
+
+              if (file1name < file2name) {
+                return -1;
+              }
+              if (file2name < file1name) {
+                return 1;
+              }
+              return 0;
+            });
             callback(null, fileList);
           }
         }
@@ -172,12 +190,12 @@ module.exports.getRemoteFileList = function(callback) {
     if (err) {
       callback(err);
     } else {
-      getRemoteFileListByDirectory(syncSession.remotePath, ignoreFileList, callback);
+      getRemoteFileListByDirectory(syncSession.remotePath, ignoreFileList, true, callback);
     }
   });
 };
 
-function getLocalFileListByDirectory(directoryPath, ignoreFileList, callback) {
+function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, callback) {
   let fileList = [];
 
   fs.readdir(directoryPath, function(err, localDirList) {
@@ -197,6 +215,7 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, callback) {
               filePath = path.relative(syncSession.localPath, directoryPath + '/' + localDir);
               tokens = filePath.split('\\');
               fileObj.filename = tokens.join('/');
+              fileObj.shortname = localDir;
               fileObj.attrs = stats;
               fileObj.attrs.modifiedUnix = moment(stats.mtime).unix();
               fileList.push(fileObj);
@@ -210,12 +229,17 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, callback) {
                 filePath = path.relative(syncSession.localPath, directoryPath + '/' + localDir);
                 tokens = filePath.split('\\');
                 fileObj.filename = tokens.join('/');
+                fileObj.shortname = localDir;
                 fileObj.attrs = stats;
                 fileObj.attrs.modifiedUnix = moment(stats.mtime).unix();
                 fileList.push(fileObj);
 
-                getLocalFileListByDirectory(directoryPath + '/' + localDir, function(err, returnedFiles) {
-                  Array.prototype.push.apply(fileList, returnedFiles);
+                getLocalFileListByDirectory(directoryPath + '/' + localDir, ignoreFileList, nested, function(err, returnedFiles) {
+                  if (nested) {
+                    fileObj.children = returnedFiles;
+                  } else {
+                    Array.prototype.push.apply(fileList, returnedFiles);
+                  }
                   arrayCallback(null);
                 });
               } else {
@@ -244,7 +268,7 @@ module.exports.getLocalFileList = function(callback) {
     if (err) {
       callback(err);
     } else {
-      getLocalFileListByDirectory(syncSession.localPath, ignoreFileList, callback);
+      getLocalFileListByDirectory(syncSession.localPath, ignoreFileList, true, callback);
     }
   });
 };
@@ -255,17 +279,17 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
       readSyncIgnoreList(autoCallback);
     },
     getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, autoCallback);
+      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
     }],
     getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, autoCallback);
+      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
     }],
     getListOfFilesToPush: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
       let bFound;
       let filesToPush = [];
 
       for (let i = 0; i < results.getLocalFileList.length; ++i) {
-        if ((filterFiles.length === 0) || (filterFiles.indexOf(results.getLocalFileList[i].filename) !== -1)) {
+        if ((filterFiles.size === 0) || filterFiles.has(results.getLocalFileList[i].filename)) {
           bFound = false;
 
           for (let j = 0; j < results.getRemoteFileList.length; ++j) {
@@ -359,17 +383,17 @@ module.exports.generateListOfFilesToPull = function(filterFiles, callback) {
       readSyncIgnoreList(autoCallback);
     },
     getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, autoCallback);
+      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
     }],
     getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, autoCallback);
+      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
     }],
     getListOfFilesToPull: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
       let bFound;
       let filesToPull = [];
 
       for (let i = 0; i < results.getRemoteFileList.length; ++i) {
-        if ((filterFiles.length === 0) || (filterFiles.indexOf(results.getRemoteFileList[i].filename) !== -1)) {
+        if ((filterFiles.size === 0) || filterFiles.has(results.getRemoteFileList[i].filename)) {
           bFound = false;
 
           for (let j = 0; j < results.getLocalFileList.length; ++j) {
