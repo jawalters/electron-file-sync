@@ -94,8 +94,65 @@
           function link(scope, element, attrs) {
             let sync = require('../utils/sync.js');
 
+            let state;
+
+            scope.localFilterList = [];
             let localFilterFiles = new Set();
+
+            scope.remoteFilterList = [];
             let remoteFilterFiles = new Set();
+
+            function setState(newState) {
+              state = newState;
+
+              switch (state) {
+                case 'connecting':
+                  scope.status = 'Connecting...';
+                  scope.showProgress = false;
+                  scope.showSpinner = true;
+                  scope.$applyAsync();
+                  break;
+
+                case 'retrieving-file-lists':
+                  scope.status = 'Retrieving file lists...';
+                  scope.showProgress = false;
+                  scope.showSpinner = true;
+                  scope.$applyAsync();
+                  break;
+
+                case 'ready':
+                  scope.status = 'Ready';
+                  scope.showProgress = false;
+                  scope.showSpinner = false;
+                  scope.$applyAsync();
+                  break;
+
+                case 'generating-transfer-list':
+                  scope.status = 'Generating list of files to transfer...';
+                  scope.showProgress = false;
+                  scope.showSpinner = true;
+                  scope.$applyAsync();
+                  break;
+
+                case 'transferring':
+                  scope.status = 'Transferring';
+                  scope.showProgress = true;
+                  scope.showSpinner = true;
+                  scope.$applyAsync();
+                  break;
+
+                default:
+                  break;
+              }
+            }
+
+            function setTempStatus(tempStatus, duration) {
+              scope.status = tempStatus;
+
+              $timeout(function() {
+                setState(state);
+              }, duration);
+            }
 
             scope.$watch('sessionConfig', function(newData, oldData) {
               if ((typeof newData === 'undefined') ||
@@ -126,8 +183,7 @@
               }
             }, true);
 
-            scope.status = 'Connecting...';
-            scope.showProgress = false;
+            setState('connecting');
 
             scope.treeOptions = {
               multiSelection: true,
@@ -153,6 +209,11 @@
               }
             };
 
+            scope.clearLocalFilterList = function() {
+              scope.localFilterList = [];
+              localFilterFiles.clear();
+            };
+
             scope.selectRemoteFilterFile = function(node, selected) {
               if (selected) {
                 remoteFilterFiles.add(node.filename);
@@ -161,7 +222,16 @@
               }
             };
 
+            scope.clearRemoteFilterList = function() {
+              scope.remoteFilterList = [];
+              remoteFilterFiles.clear();
+            };
+
             function getFileLists() {
+              setState('retrieving-file-lists');
+
+              console.time('retrieve-file-list-time');
+
               async.parallel(
                 [
                   function(parallelCallback) {
@@ -188,14 +258,16 @@
                       }
                     });
                   }
-                ]
+                ],
+                function() {
+                  setState('ready');
+                  console.timeEnd('retrieve-file-list-time');
+                }
               );
             }
 
             sync.init(scope.sessionConfig, function() {
               console.log('sync initialized');
-              scope.status = 'Ready';
-              scope.$apply();
 
               getFileLists();
             });
@@ -207,16 +279,25 @@
             };
 
             scope.getListOfFilesToPush = function() {
+              setState('generating-transfer-list');
+
               scope.push = true;
 
               sync.generateListOfFilesToPush(localFilterFiles, function(err, filesToPush) {
                 scope.selectall = true;
 
-                scope.files = filesToPush;
-                for (let i = 0; i < scope.files.length; ++i) {
-                  scope.files[i].send = true;
+                setState('ready');
+
+                if (filesToPush.length) {
+                  scope.files = filesToPush;
+                  for (let i = 0; i < scope.files.length; ++i) {
+                    scope.files[i].send = true;
+                  }
+
+                  $(`#${ scope.sessionConfig.id }_modal`).modal('show');
+                } else {
+                  setTempStatus('No files to transfer', 5000);
                 }
-                scope.$apply();
               });
             };
 
@@ -225,7 +306,7 @@
                 return file.send;
               });
 
-              scope.showProgress = true;
+              //scope.showProgress = true;
               scope.progress = 0;
               scope.progressStyle = { width: '0%' };
               sync.pushFiles(
@@ -237,21 +318,14 @@
                   scope.$apply();
                 },
                 function() {
-                  $timeout(function() {
-                    scope.status = 'Transfer complete';
-                    scope.progress = 100;
-                    scope.progressStyle = { width: '100%' };
-                  }, 500);
-
-                  $timeout(function() {
-                    scope.status = 'Ready';
-                    scope.showProgress = false;
-                  }, 5000);
+                  setState('retrieving-file-lists');
+                  setTempStatus('Transfer complete', 5000);
 
                   sync.getRemoteFileList(function(err, fileList) {
                     if (err) {
                       console.log(err);
                     } else {
+                      setState('ready');
                       scope.remoteFileList = fileList;
                       scope.$apply();
                     }
@@ -261,25 +335,35 @@
             };
 
             scope.getListOfFilesToPull = function() {
+              setState('generating-transfer-list');
+
               scope.push = false;
 
               sync.generateListOfFilesToPull(remoteFilterFiles, function(err, filesToPull) {
                 scope.selectall = true;
 
-                scope.files = filesToPull;
-                for (let i = 0; i < scope.files.length; ++i) {
-                  scope.files[i].send = true;
+                setState('ready');
+
+                if (filesToPull.length) {
+                  scope.files = filesToPull;
+                  for (let i = 0; i < scope.files.length; ++i) {
+                    scope.files[i].send = true;
+                  }
+
+                  $(`#${ scope.sessionConfig.id }_modal`).modal('show');
+                } else {
+                  setTempStatus('No files to transfer', 5000);
                 }
-                scope.$apply();
               });
             };
 
             scope.pullFiles = function(files) {
+              setState('transferring');
+
               let filesToPull = files.filter(function(file) {
                 return file.send;
               });
 
-              scope.showProgress = true;
               scope.progress = 0;
               scope.progressStyle = { width: '0%' };
               sync.pullFiles(
@@ -291,21 +375,14 @@
                   scope.$apply();
                 },
                 function() {
-                  $timeout(function() {
-                    scope.status = 'Transfer complete';
-                    scope.progress = 100;
-                    scope.progressStyle = { width: '100%' };
-                  }, 500);
-
-                  $timeout(function() {
-                    scope.status = 'Ready';
-                    scope.showProgress = false;
-                  }, 5000);
+                  setState('retrieving-file-lists');
+                  setTempStatus('Transfer complete', 5000);
 
                   sync.getLocalFileList(function(err, fileList) {
                     if (err) {
                       console.log(err);
                     } else {
+                      setState('ready');
                       scope.localFileList = fileList;
                       scope.$apply();
                     }

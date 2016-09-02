@@ -112,16 +112,15 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
 
       callback(err);
     } else {
-      let fileObj = {};
       let filePath;
       let tokens = [];
 
-      async.eachSeries(
+      async.each(
         remoteDirList,
         function(remoteDir, arrayCallback) {
           if (isFile(remoteDir.attrs.mode)) {
             if (!isFileIgnored(path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
-              fileObj = {};
+              let fileObj = {};
               filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
               tokens = filePath.split('\\');
               fileObj.filename = tokens.join('/');
@@ -135,7 +134,7 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
           } else {
             if (isDirectory(remoteDir.attrs.mode) && syncSession.recursive) {
               if (!isDirectoryIgnored(path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
-                fileObj = {};
+                let fileObj = {};
                 filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
                 tokens = filePath.split('\\');
                 fileObj.filename = tokens.join('/');
@@ -203,6 +202,9 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
     let filePath;
     let tokens = [];
 
+    // attn - On average, eachSeries seems to be more efficient when retrieving
+    //        both the local and remote lists in parallel.  I'm not sure how this
+    //        can be, as each is faster when retrieving just the local file list.
     async.eachSeries(localDirList, function(localDir, arrayCallback) {
       fs.stat(directoryPath + '/' + localDir, function(err, stats) {
         if (err) {
@@ -257,6 +259,18 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
         console.log('async.eachSeries error:', err);
         callback(err);
       } else {
+        fileList.sort(function(file1, file2) {
+          let file1name = file1.filename.toUpperCase();
+          let file2name = file2.filename.toUpperCase();
+
+          if (file1name < file2name) {
+            return -1;
+          }
+          if (file2name < file1name) {
+            return 1;
+          }
+          return 0;
+        });
         callback(null, fileList);
       }
     });
@@ -338,7 +352,8 @@ module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
     }, 0);
     let bytesTransferred = 0;
 
-    async.eachSeries(filesToPush, function(file, arrayCallback) {
+    //async.eachSeries(filesToPush, function(file, arrayCallback) {
+    async.eachLimit(filesToPush, 20, function(file, arrayCallback) {
       if (file.attrs.isFile()) {
         sftpSession.fastPut(
           syncSession.localPath + '/' + file.filename,
@@ -442,7 +457,8 @@ module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
     }, 0);
     let bytesTransferred = 0;
 
-    async.eachSeries(filesToPull, function(file, arrayCallback) {
+    //async.eachSeries(filesToPull, function(file, arrayCallback) {
+    async.eachLimit(filesToPull, 20, function(file, arrayCallback) {
       if (isFile(file.attrs.mode)) {
         sftpSession.fastGet(
           syncSession.remotePath + '/' + file.filename,

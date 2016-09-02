@@ -24,18 +24,25 @@
               tree-model="localFileList"
               options="treeOptions"
               on-selection="selectLocalFilterFile(node, selected)"
-              selected-node="node1">
+              selected-node="node1"
+              selected-nodes="localFilterList">
               {{ node.shortname }}
             </treecontrol>
+          </div>
+          <div class="panel-footer" ng-show="localFilterList.length">
+            <span>{{ localFilterList.length }} item(s) selected</span>
+            <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearLocalFilterList();">
+              <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
       </div>
 
       <div class="col-xs-2 buttons-column">
-        <button type="button" class="btn btn-default push-pull-buttons" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">
+        <button type="button" class="btn btn-default push-pull-buttons" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();">
           <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span>
         </button><br>
-        <button type="button" class="btn btn-default push-pull-buttons" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull()" data-toggle="modal" data-target="#{{ sessionConfig.id }}_modal">
+        <button type="button" class="btn btn-default push-pull-buttons" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull();">
           <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
         </button>
       </div>
@@ -50,15 +57,23 @@
               tree-model="remoteFileList"
               options="treeOptions"
               on-selection="selectRemoteFilterFile(node, selected)"
-              selected-node="node1">
+              selected-node="node1"
+              selected-nodes="remoteFilterList">
               {{ node.shortname }}
             </treecontrol>
+          </div>
+          <div class="panel-footer" ng-show="remoteFilterList.length">
+            <span>{{ remoteFilterList.length }} item(s) selected</span>
+            <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearRemoteFilterList();">
+              <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
   <div class="panel-footer">
+    <span class="glyphicon glyphicon-repeat" ng-class="{ 'rotate-animation': showSpinner }" ng-show="showSpinner" aria-hidden="true"></span>
     <span id="(( sessionConfig.id }}_status">{{ status }}</span>
     <span id="{{ sessionConfig.id }}_progress">
       <div class="progress" ng-show="showProgress">

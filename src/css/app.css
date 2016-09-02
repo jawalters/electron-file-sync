@@ -32,10 +32,33 @@
   background: none;
 }
 
+.panel-footer-buttons {
+  border: none;
+  background: none;
+  float: right;
+}
+
+.panel-footer-buttons:hover {
+  color: red;
+  background: none;
+}
+
 .buttons-column {
   text-align: center;
 }
 
 .push-pull-buttons {
   margin-top: 15px;
+}
+
+@keyframes rotate {
+  from { }
+  to { transform: rotate(360deg); }
+}
+
+.rotate-animation {
+  animation-name: rotate;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
 }
