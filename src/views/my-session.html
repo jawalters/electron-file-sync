@@ -1,121 +1,123 @@
-<div class="panel panel-default">
-  <div class="panel-heading">
-    <h3 class="panel-title">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h3>
-    <button type="button" class="btn btn-default btn-xs panel-heading-buttons endSession" id="{{ sessionConfig.id }}_endSession" ng-click="endSession(sessionConfig.id)" onclick="this.blur();">
-      <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
-    </button>
-    <button type="button" class="btn btn-default btn-xs panel-heading-buttons editConfig" id="{{ sessionConfig.id }}_editConfig" ng-click="editSession(sessionConfig.id)" onclick="this.blur();">
-      <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
-    </button>
-    <button type="button" class="btn btn-default btn-xs panel-heading-buttons refresh" id="{{ sessionConfig.id }}_refresh" onclick="this.blur();">
-      <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
-    </button>
-  </div>
+<div class="col-xs-6">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h3>
+      <button type="button" class="btn btn-default btn-xs panel-heading-buttons endSession" id="{{ sessionConfig.id }}_endSession" ng-click="endSession(sessionConfig.id)" onclick="this.blur();">
+        <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="btn btn-default btn-xs panel-heading-buttons editConfig" id="{{ sessionConfig.id }}_editConfig" ng-click="editSession(sessionConfig.id)" onclick="this.blur();">
+        <span class="glyphicon glyphicon-cog" aria-hidden="true"></span>
+      </button>
+      <button type="button" class="btn btn-default btn-xs panel-heading-buttons refresh" id="{{ sessionConfig.id }}_refresh" onclick="this.blur();">
+        <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+      </button>
+    </div>
 
-  <div class="panel-body container-fluid">
-    <div class="row">
-      <div class="col-xs-5">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h2 class="panel-title">Local Files</h2>
-          </div>
-          <div class="panel-body">
-            <treecontrol class="tree-classic"
-              tree-model="localFileList"
-              options="treeOptions"
-              on-selection="selectLocalFilterFile(node, selected)"
-              selected-node="node1"
-              selected-nodes="localFilterList">
-              {{ node.shortname }}
-            </treecontrol>
-          </div>
-          <div class="panel-footer" ng-show="localFilterList.length">
-            <span>{{ localFilterList.length }} item(s) selected</span>
-            <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearLocalFilterList();">
-              <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
-            </button>
+    <div class="panel-body">
+      <div class="row">
+        <div class="col-xs-5">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h2 class="panel-title">Local Files</h2>
+            </div>
+            <div class="panel-body">
+              <treecontrol class="tree-classic"
+                tree-model="localFileList"
+                options="treeOptions"
+                on-selection="selectLocalFilterFile(node, selected)"
+                selected-node="node1"
+                selected-nodes="localFilterList">
+                {{ node.shortname }}
+              </treecontrol>
+            </div>
+            <div class="panel-footer" ng-show="localFilterList.length">
+              <span>{{ localFilterList.length }} item(s) selected</span>
+              <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearLocalFilterList();">
+                <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="col-xs-2 buttons-column">
-        <button type="button" class="btn btn-default push-pull-buttons" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();">
-          <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span>
-        </button><br>
-        <button type="button" class="btn btn-default push-pull-buttons" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull();">
-          <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
-        </button>
-      </div>
+        <div class="col-xs-2 buttons-column">
+          <button type="button" class="btn btn-default push-pull-buttons" id="push" onclick="this.blur();" ng-click="getListOfFilesToPush();">
+            <span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span>
+          </button><br>
+          <button type="button" class="btn btn-default push-pull-buttons" id="pull" onclick="this.blur();" ng-click="getListOfFilesToPull();">
+            <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
+          </button>
+        </div>
 
-      <div class="col-xs-5">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h2 class="panel-title">Remote Files</h2>
-          </div>
-          <div class="panel-body">
-            <treecontrol class="tree-classic"
-              tree-model="remoteFileList"
-              options="treeOptions"
-              on-selection="selectRemoteFilterFile(node, selected)"
-              selected-node="node1"
-              selected-nodes="remoteFilterList">
-              {{ node.shortname }}
-            </treecontrol>
-          </div>
-          <div class="panel-footer" ng-show="remoteFilterList.length">
-            <span>{{ remoteFilterList.length }} item(s) selected</span>
-            <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearRemoteFilterList();">
-              <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
-            </button>
+        <div class="col-xs-5">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h2 class="panel-title">Remote Files</h2>
+            </div>
+            <div class="panel-body">
+              <treecontrol class="tree-classic"
+                tree-model="remoteFileList"
+                options="treeOptions"
+                on-selection="selectRemoteFilterFile(node, selected)"
+                selected-node="node1"
+                selected-nodes="remoteFilterList">
+                {{ node.shortname }}
+              </treecontrol>
+            </div>
+            <div class="panel-footer" ng-show="remoteFilterList.length">
+              <span>{{ remoteFilterList.length }} item(s) selected</span>
+              <button type="button" class="btn btn-default btn-xs panel-footer-buttons clear-filter" onclick="this.blur();" ng-click="clearRemoteFilterList();">
+                <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    <div class="panel-footer">
+      <span class="glyphicon glyphicon-repeat" ng-class="{ 'rotate-animation': showSpinner }" ng-show="showSpinner" aria-hidden="true"></span>
+      <span id="(( sessionConfig.id }}_status">{{ status }}</span>
+      <span id="{{ sessionConfig.id }}_progress">
+        <div class="progress" ng-show="showProgress">
+          <div class="progress-bar" role="progress" ng-style="progressStyle"></div>
+        </div>
+      </span>
+    </div>
   </div>
-  <div class="panel-footer">
-    <span class="glyphicon glyphicon-repeat" ng-class="{ 'rotate-animation': showSpinner }" ng-show="showSpinner" aria-hidden="true"></span>
-    <span id="(( sessionConfig.id }}_status">{{ status }}</span>
-    <span id="{{ sessionConfig.id }}_progress">
-      <div class="progress" ng-show="showProgress">
-        <div class="progress-bar" role="progress" ng-style="progressStyle"></div>
-      </div>
-    </span>
-  </div>
-</div>
 
-<div class="modal fade" id="{{ sessionConfig.id }}_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-        <h4 class="modal-title" id="{{ sessionConfig.id }}_myModalLabel">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h4>
-      </div>
-      <div class="modal-body">
+  <div class="modal fade" id="{{ sessionConfig.id }}_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title" id="{{ sessionConfig.id }}_myModalLabel">{{ sessionConfig.name }} - {{ sessionConfig.target.name }}</h4>
+        </div>
+        <div class="modal-body">
 
-        <table id="{{ sessionConfig.id }}_confirmTable" class="table table-bordered table-striped">
-          <thead>
-            <tr>
-              <th><input type="checkbox" ng-model="selectall" ng-change="selectAll();" /></th>
-              <th>File</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr ng-repeat="file in files">
-              <td>
-                <input type="checkbox" ng-model="file.send" />
-              </td>
-              <td>{{ file.filename }}</td>
-            </tr>
-          </tbody>
-        </table>
+          <table id="{{ sessionConfig.id }}_confirmTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th><input type="checkbox" ng-model="selectall" ng-change="selectAll();" /></th>
+                <th>File</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="file in files">
+                <td>
+                  <input type="checkbox" ng-model="file.send" />
+                </td>
+                <td>{{ file.filename }}</td>
+              </tr>
+            </tbody>
+          </table>
 
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-show="push" ng-click="pushFiles(files);">Push Files</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" ng-hide="push" ng-click="pullFiles(files);">Pull Files</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-show="push" ng-click="pushFiles(files);">Push Files</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal" ng-hide="push" ng-click="pullFiles(files);">Pull Files</button>
+        </div>
       </div>
     </div>
   </div>

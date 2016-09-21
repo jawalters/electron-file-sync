@@ -13,6 +13,8 @@ let mainWindow;
 let targetWindow;
 let sessionWindow;
 
+let activeSessions = {};
+
 let template = [
   {
     label: 'Targets',
@@ -223,7 +225,9 @@ function loadSessionMenus(callback) {
         template[sessionsTemplateIndex].submenu[deleteIndex].submenu = [];
         template[sessionsTemplateIndex].submenu[startSessionIndex].submenu = [];
 
-        sessions.forEach(function(item) {
+        sessions.forEach(function(item, index) {
+          let sessionIndex = index;
+
           template[sessionsTemplateIndex].submenu[editIndex].submenu.push({
             label: item.name,
             click: function() {
@@ -256,8 +260,10 @@ function loadSessionMenus(callback) {
             label: item.name,
             click: function() {
               mainWindow.webContents.send('asynchronous-message', `start-session ${ item.id }`);
-              //sessionWindow.show();
-            }
+              activeSessions[item.id] = true;
+              loadSessionMenus(function() { });
+            },
+            enabled: !activeSessions[item.id]
           });
         });
 
@@ -358,6 +364,11 @@ ipcMain.on('asynchronous-message', function(event, arg) {
       case 'edit-session':
         sessionWindow.webContents.send('asynchronous-message', tokens[1]);
         sessionWindow.show();
+        break;
+
+      case 'session-ended':
+        delete activeSessions[tokens[1]];
+        loadSessionMenus(function() { });
         break;
 
       default:

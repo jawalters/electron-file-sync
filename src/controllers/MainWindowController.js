@@ -8,6 +8,7 @@
 
   function MainWindowController($scope, $compile) {
     $scope.activeSessions = {};
+    let activeSessionArr = [];
 
     window.$ = window.jQuery = require('../bower_components/jquery/dist/jquery.min.js');
 
@@ -38,10 +39,32 @@
     }
 
     $scope.endSession = function(sessionId) {
-      console.log('controller endSession:', sessionId);
-      $(`#${ sessionId }`).remove();
+      let index = activeSessionArr.indexOf(sessionId);
+      let count = activeSessionArr.length;
+      let rows = Math.ceil(count / 2);
+
+      $(`#${sessionId}`).remove();
+
+      for (let i = Math.ceil((index + 1) / 2); i < rows; ++i) {
+        $(`#${activeSessionArr[i * 2]}`).appendTo(`#row${i}`);
+      }
+
+      if ((count % 2) === 1) {
+        $(`#row${rows}`).remove();
+      }
+
       delete $scope.activeSessions[sessionId];
-      console.log($scope.activeSessions);
+      activeSessionArr.splice(index, 1);
+      ipcRenderer.send('asynchronous-message', `session-ended ${ sessionId }`);
+    }
+
+    function addActiveSession(sessionId, scope) {
+      activeSessionArr.push(sessionId);
+      if ((activeSessionArr.length % 2) === 1) {
+        $('#sessionContainer').append(`<div id="row${Math.ceil(activeSessionArr.length / 2)}" class="row"></div>`);
+      }
+
+      $(`#row${Math.ceil(activeSessionArr.length / 2)}`).append($compile(`<my-session id="${sessionId}" session-config="activeSessions['${sessionId}']" end-session="endSession" edit-session="editSession"></my-session>`)($scope));
     }
 
     ipcRenderer.on('asynchronous-message', function(event, arg) {
@@ -55,7 +78,7 @@
               if (err) {
                 console.log(err);
               } else {
-                $('#sessionContainer').append($compile(`<my-session id="${sessionId}" session-config="activeSessions['${sessionId}']" end-session="endSession" edit-session="editSession"></my-session>`)($scope));
+                addActiveSession(sessionId);
               }
             });
             break;
