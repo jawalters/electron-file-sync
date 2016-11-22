@@ -115,7 +115,7 @@
   module.controller('MainWindowController', MainWindowController)
         .directive('mySession', function($timeout) {
           function link(scope, element, attrs) {
-            let sync = require('../utils/sync.js');
+            let sync = new (require('../utils/sync.js'))();
 
             let state;
 

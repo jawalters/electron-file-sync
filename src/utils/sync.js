@@ -6,18 +6,14 @@ const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 
-let conn = new Connection();
-let connectionEstablished = false;
-let sftpSession;
-let syncSession;
-
-module.exports.init = function(session, callback) {
-  if (connectionEstablished) {
-    connectionEstablished = false;
-    conn.end();
-    conn = new Connection();
+function init(session, callback) {
+  let self = this;
+  if (self.connectionEstablished) {
+    self.connectionEstablished = false;
+    self.conn.end();
+    self.conn = new Connection();
   }
-  syncSession = session;
+  self.syncSession = session;
 
   let options = {
     host:         session.target.host,
@@ -33,26 +29,27 @@ module.exports.init = function(session, callback) {
     options.password = session.target.password;
   }
 
-  conn.connect(options);
+  self.conn.connect(options);
 
-  conn.on('ready', function() {
-    conn.sftp(function(err, sftp) {
+  self.conn.on('ready', function() {
+    self.conn.sftp(function(err, sftp) {
       if (err) {
         console.log('error creating sftp:', err);
-        sftpSession = null;
+        self.sftpSession = null;
         callback(err);
       } else {
-        sftpSession = sftp;
-        connectionEstablished = true;
+        self.sftpSession = sftp;
+        self.connectionEstablished = true;
         callback(null);
       }
     });
   });
-};
+}
 
 function readSyncIgnoreList(callback) {
+  let self = this;
   let ignoreFileList = [];
-  let contents = syncSession.fileIgnoreList;
+  let contents = self.syncSession.fileIgnoreList;
 
   if (contents) {
     ignoreFileList = contents.trim().split('\n');
@@ -104,9 +101,10 @@ function isDirectory(modeFlags) {
 }
 
 function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, callback) {
+  let self = this;
   let fileList = [];
 
-  sftpSession.readdir(directoryPath, function(err, remoteDirList) {
+  self.sftpSession.readdir(directoryPath, function(err, remoteDirList) {
     if (err) {
       console.log('sftpSession.readdir error:', err);
 
@@ -119,9 +117,9 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
         remoteDirList,
         function(remoteDir, arrayCallback) {
           if (isFile(remoteDir.attrs.mode)) {
-            if (!isFileIgnored(path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
+            if (!isFileIgnored(path.relative(self.syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
               let fileObj = {};
-              filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
+              filePath = path.relative(self.syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
               tokens = filePath.split('\\');
               fileObj.filename = tokens.join('/');
               fileObj.shortname = remoteDir.filename;
@@ -132,10 +130,10 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
 
             setImmediate(arrayCallback, null);
           } else {
-            if (isDirectory(remoteDir.attrs.mode) && syncSession.recursive) {
-              if (!isDirectoryIgnored(path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
+            if (isDirectory(remoteDir.attrs.mode) && self.syncSession.recursive) {
+              if (!isDirectoryIgnored(path.relative(self.syncSession.remotePath, directoryPath + '/' + remoteDir.filename), ignoreFileList)) {
                 let fileObj = {};
-                filePath = path.relative(syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
+                filePath = path.relative(self.syncSession.remotePath, directoryPath + '/' + remoteDir.filename);
                 tokens = filePath.split('\\');
                 fileObj.filename = tokens.join('/');
                 fileObj.shortname = remoteDir.filename;
@@ -143,7 +141,7 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
                 fileObj.attrs.modifiedUnix = remoteDir.attrs.mtime;
                 fileList.push(fileObj);
 
-                getRemoteFileListByDirectory(directoryPath + '/' + remoteDir.filename, ignoreFileList, nested, function(err, returnedFiles) {
+                getRemoteFileListByDirectory.call(self, directoryPath + '/' + remoteDir.filename, ignoreFileList, nested, function(err, returnedFiles) {
                   if (nested) {
                     fileObj.children = returnedFiles;
                   } else {
@@ -184,17 +182,20 @@ function getRemoteFileListByDirectory(directoryPath, ignoreFileList, nested, cal
   });
 }
 
-module.exports.getRemoteFileList = function(callback) {
-  readSyncIgnoreList(function(err, ignoreFileList) {
+function getRemoteFileList(callback) {
+  let self = this;
+
+  readSyncIgnoreList.call(self, function(err, ignoreFileList) {
     if (err) {
       callback(err);
     } else {
-      getRemoteFileListByDirectory(syncSession.remotePath, ignoreFileList, true, callback);
+      getRemoteFileListByDirectory.call(self, self.syncSession.remotePath, ignoreFileList, true, callback);
     }
   });
-};
+}
 
 function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, callback) {
+  let self = this;
   let fileList = [];
 
   fs.readdir(directoryPath, function(err, localDirList) {
@@ -212,9 +213,9 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
           arrayCallback(err);
         } else {
           if (stats.isFile()) {
-            if (!isFileIgnored(path.relative(syncSession.localPath, directoryPath + '/' + localDir), ignoreFileList)) {
+            if (!isFileIgnored(path.relative(self.syncSession.localPath, directoryPath + '/' + localDir), ignoreFileList)) {
               fileObj = {};
-              filePath = path.relative(syncSession.localPath, directoryPath + '/' + localDir);
+              filePath = path.relative(self.syncSession.localPath, directoryPath + '/' + localDir);
               tokens = filePath.split('\\');
               fileObj.filename = tokens.join('/');
               fileObj.shortname = localDir;
@@ -225,10 +226,10 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
 
             arrayCallback(null);
           } else {
-            if (stats.isDirectory() && syncSession.recursive) {
-              if (!isDirectoryIgnored(path.relative(syncSession.localPath, directoryPath + '/' + localDir), ignoreFileList)) {
+            if (stats.isDirectory() && self.syncSession.recursive) {
+              if (!isDirectoryIgnored(path.relative(self.syncSession.localPath, directoryPath + '/' + localDir), ignoreFileList)) {
                 fileObj = {};
-                filePath = path.relative(syncSession.localPath, directoryPath + '/' + localDir);
+                filePath = path.relative(self.syncSession.localPath, directoryPath + '/' + localDir);
                 tokens = filePath.split('\\');
                 fileObj.filename = tokens.join('/');
                 fileObj.shortname = localDir;
@@ -236,7 +237,7 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
                 fileObj.attrs.modifiedUnix = moment(stats.mtime).unix();
                 fileList.push(fileObj);
 
-                getLocalFileListByDirectory(directoryPath + '/' + localDir, ignoreFileList, nested, function(err, returnedFiles) {
+                getLocalFileListByDirectory.call(self, directoryPath + '/' + localDir, ignoreFileList, nested, function(err, returnedFiles) {
                   if (nested) {
                     fileObj.children = returnedFiles;
                   } else {
@@ -277,26 +278,30 @@ function getLocalFileListByDirectory(directoryPath, ignoreFileList, nested, call
   });
 }
 
-module.exports.getLocalFileList = function(callback) {
-  readSyncIgnoreList(function(err, ignoreFileList) {
+function getLocalFileList(callback) {
+  let self = this;
+
+  readSyncIgnoreList.call(self, function(err, ignoreFileList) {
     if (err) {
       callback(err);
     } else {
-      getLocalFileListByDirectory(syncSession.localPath, ignoreFileList, true, callback);
+      getLocalFileListByDirectory.call(self, self.syncSession.localPath, ignoreFileList, true, callback);
     }
   });
-};
+}
 
-module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
+function generateListOfFilesToPush(filterFiles, callback) {
+  let self = this;
+
   async.auto({
     getIgnoreFileList: function(autoCallback) {
-      readSyncIgnoreList(autoCallback);
+      readSyncIgnoreList.call(self, autoCallback);
     },
     getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
+      getLocalFileListByDirectory.call(self, self.syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
     }],
     getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
+      getRemoteFileListByDirectory.call(self, self.syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
     }],
     getListOfFilesToPush: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
       let bFound;
@@ -336,16 +341,20 @@ module.exports.generateListOfFilesToPush = function(filterFiles, callback) {
       callback(null, results.getListOfFilesToPush);
     }
   });
-};
-
-function setRemoteFileModificationTime(filename, modTime, callback) {
-  sftpSession.utimes(syncSession.remotePath + '/' + filename,
-                     modTime,
-                     modTime,
-                     callback);
 }
 
-module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
+function setRemoteFileModificationTime(filename, modTime, callback) {
+  let self = this;
+
+  self.sftpSession.utimes(self.syncSession.remotePath + '/' + filename,
+                          modTime,
+                          modTime,
+                          callback);
+}
+
+function pushFiles(filesToPush, stepFunction, callback) {
+  let self = this;
+
   if (filesToPush.length) {
     let total = filesToPush.reduce(function(previousValue, file) {
       return previousValue + file.attrs.size;
@@ -355,9 +364,9 @@ module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
     //async.eachSeries(filesToPush, function(file, arrayCallback) {
     async.eachLimit(filesToPush, 20, function(file, arrayCallback) {
       if (file.attrs.isFile()) {
-        sftpSession.fastPut(
-          syncSession.localPath + '/' + file.filename,
-          syncSession.remotePath + '/' + file.filename,
+        self.sftpSession.fastPut(
+          self.syncSession.localPath + '/' + file.filename,
+          self.syncSession.remotePath + '/' + file.filename,
           {
             step: function(bytesTransferredForFile, chunk, totalForFile) {
               bytesTransferred += chunk;
@@ -365,12 +374,12 @@ module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
             }
           },
           function() {
-            setRemoteFileModificationTime(file.filename, file.attrs.mtime, arrayCallback);
+            setRemoteFileModificationTime.call(self, file.filename, file.attrs.mtime, arrayCallback);
           });
       } else {
         if (file.attrs.isDirectory()) {
-          sftpSession.mkdir(
-            syncSession.remotePath + '/' + file.filename,
+          self.sftpSession.mkdir(
+            self.syncSession.remotePath + '/' + file.filename,
             function() {
               arrayCallback(null);
             });
@@ -390,18 +399,20 @@ module.exports.pushFiles = function(filesToPush, stepFunction, callback) {
   } else {
     callback(null);
   }
-};
+}
 
-module.exports.generateListOfFilesToPull = function(filterFiles, callback) {
+function generateListOfFilesToPull(filterFiles, callback) {
+  let self = this;
+
   async.auto({
     getIgnoreFileList: function(autoCallback) {
-      readSyncIgnoreList(autoCallback);
+      readSyncIgnoreList.call(self, autoCallback);
     },
     getLocalFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getLocalFileListByDirectory(syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
+      getLocalFileListByDirectory.call(self, self.syncSession.localPath, results.getIgnoreFileList, false, autoCallback);
     }],
     getRemoteFileList: ['getIgnoreFileList', function(results, autoCallback) {
-      getRemoteFileListByDirectory(syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
+      getRemoteFileListByDirectory.call(self, self.syncSession.remotePath, results.getIgnoreFileList, false, autoCallback);
     }],
     getListOfFilesToPull: ['getLocalFileList', 'getRemoteFileList', function(results, autoCallback) {
       let bFound;
@@ -441,16 +452,20 @@ module.exports.generateListOfFilesToPull = function(filterFiles, callback) {
       callback(null, results.getListOfFilesToPull);
     }
   });
-};
+}
 
 function setLocalFileModificationTime(filename, modTime, callback) {
-  fs.utimes(syncSession.localPath + '/' + filename,
+  let self = this;
+
+  fs.utimes(self.syncSession.localPath + '/' + filename,
             modTime,
             modTime,
             callback);
 }
 
-module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
+function pullFiles(filesToPull, stepFunction, callback) {
+  let self = this;
+
   if (filesToPull.length) {
     let total = filesToPull.reduce(function(previousValue, file) {
       return previousValue + file.attrs.size;
@@ -460,9 +475,9 @@ module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
     //async.eachSeries(filesToPull, function(file, arrayCallback) {
     async.eachLimit(filesToPull, 20, function(file, arrayCallback) {
       if (isFile(file.attrs.mode)) {
-        sftpSession.fastGet(
-          syncSession.remotePath + '/' + file.filename,
-          syncSession.localPath + '/' + file.filename,
+        self.sftpSession.fastGet(
+          self.syncSession.remotePath + '/' + file.filename,
+          self.syncSession.localPath + '/' + file.filename,
           {
             step: function(bytesTransferredForFile, chunk, totalForFile) {
               bytesTransferred += chunk;
@@ -470,11 +485,11 @@ module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
             }
           },
           function() {
-            setLocalFileModificationTime(file.filename, file.attrs.mtime, arrayCallback);
+            setLocalFileModificationTime.call(self, file.filename, file.attrs.mtime, arrayCallback);
           });
       } else {
         if (isDirectory(file.attrs.mode)) {
-          fs.mkdirSync(syncSession.localPath + '/' + file.filename);
+          fs.mkdirSync(self.syncSession.localPath + '/' + file.filename);
         }
 
         arrayCallback(null);
@@ -491,4 +506,23 @@ module.exports.pullFiles = function(filesToPull, stepFunction, callback) {
   } else {
     callback(null);
   }
-};
+}
+
+function Sync() {
+  this.conn = new Connection();
+  this.connectionEstablished = false;
+  this.sftpSession;
+  this.syncSession;
+
+  this.init = init;
+  this.getRemoteFileList = getRemoteFileList;
+  this.getLocalFileList = getLocalFileList;
+  this.generateListOfFilesToPush = generateListOfFilesToPush;
+  this.pushFiles = pushFiles;
+  this.generateListOfFilesToPull = generateListOfFilesToPull;
+  this.pullFiles = pullFiles;
+
+  return this;
+}
+
+module.exports = Sync;
