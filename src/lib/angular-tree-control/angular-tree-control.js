@@ -114,6 +114,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                     expandedNodes: "=?",
                     onSelection: "&",
                     onNodeToggle: "&",
+                    onRightClick: "&",
                     options: "=?",
                     orderBy: "=?",
                     reverseOrder: "@",
@@ -249,6 +250,12 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                         }
                     };
 
+                    $scope.rightSelectNodeLabel = function(targetNode) {
+                        if ($scope.onRightClick) {
+                            $scope.onRightClick({ node: targetNode });
+                        }
+                    };
+
                     $scope.selectedClass = function() {
                         var isThisNodeSelected = isSelectedNode(this.node);
                         var labelSelectionClass = classIfDefined($scope.options.injectClasses.labelSelected, false);
@@ -298,7 +305,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                             'set-node-to-data>' +
                             '<i class="tree-branch-head" ng-class="iBranchClass()" ng-click="selectNodeHead(node)"></i>' +
                             '<i class="tree-leaf-head {{options.iLeafClass}}"></i>' +
-                            '<div class="tree-label {{options.labelClass}}" ng-class="[selectedClass(), unselectableClass()]" ng-click="selectNodeLabel(node)" tree-transclude></div>' +
+                            '<div class="tree-label {{options.labelClass}}" ng-class="[selectedClass(), unselectableClass()]" ng-click="selectNodeLabel(node)" ng-right-click="rightSelectNodeLabel(node)" tree-transclude></div>' +
                             '<treeitem ng-if="nodeExpanded()"></treeitem>' +
                             '</li>' +
                             '</ul>';
@@ -381,6 +388,17 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                 }
             };
         }])
+        .directive('ngRightClick', function($parse) {
+            return function(scope, element, attrs) {
+                var fn = $parse(attrs.ngRightClick);
+                element.bind('contextmenu', function(event) {
+                    scope.$apply(function() {
+                        event.preventDefault();     // Don't show the browser's normal context menu
+                        fn(scope, {$event:event});  // call the function inside the ng-right-click attribute
+                    });
+                });
+            };
+        })
         .directive("treeitem", function() {
             return {
                 restrict: 'E',
