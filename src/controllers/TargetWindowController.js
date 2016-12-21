@@ -9,9 +9,9 @@
     $scope.target = {};
 
     ipcRenderer.on('asynchronous-message', function(event, arg) {
-      if (typeof arg === 'string') {
-        switch (arg) {
-          case 'new target':
+      if (typeof arg === 'object') {
+        switch (arg.command) {
+          case 'createTarget':
             $scope.heading = 'Create Target';
             $scope.target.id = nodeUuid.v1();
             $scope.target.name = '';
@@ -22,8 +22,8 @@
             $scope.$apply();
             break;
 
-          default:
-            storage.getTarget({ id: arg }, function(err, target) {
+          case 'editTarget':
+            storage.getTarget({ id: arg.targetId }, function(err, target) {
               if (err) {
                 console.log(err);
               } else {
@@ -39,6 +39,28 @@
                 }
               }
             });
+            break;
+
+          case 'cloneTarget':
+            storage.getTarget({ id: arg.targetId }, function(err, target) {
+              if (err) {
+                console.log(err);
+              } else {
+                if (target) {
+                  $scope.heading = `Clone Target '${target.name}'`;
+                  $scope.target.id = nodeUuid.v1();
+                  $scope.target.name = target.name;
+                  $scope.target.host = target.host;
+                  $scope.target.username = target.username;
+                  $scope.target.password = target.password;
+                  $scope.target.keyfilePath = target.keyfilePath;
+                  $scope.$apply();
+                }
+              }
+            });
+            break;
+
+          default:
             break;
         }
       }

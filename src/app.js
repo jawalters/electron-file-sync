@@ -20,10 +20,12 @@ let template = [
     label: 'Targets',
     submenu: [
       {
-        label: 'New Target',
+        label: 'Create Target',
         accelerator: 'CmdOrCtrl+T',
         click: function() {
-          targetWindow.webContents.send('asynchronous-message', 'new target');
+          targetWindow.webContents.send('asynchronous-message', {
+            command: 'createTarget'
+          });
           targetWindow.show();
         }
       },
@@ -34,6 +36,10 @@ let template = [
       {
         label: 'Delete Target',
         enabled: false
+      },
+      {
+        label: 'Clone Target',
+        enabled: false
       }
     ]
   },
@@ -41,10 +47,12 @@ let template = [
     label: 'Sessions',
     submenu: [
       {
-        label: 'New Session',
+        label: 'Create Session',
         accelerator: 'CmdOrCtrl+S',
         click: function() {
-          sessionWindow.webContents.send('asynchronous-message', 'new session');
+          sessionWindow.webContents.send('asynchronous-message', {
+            command: 'createSession'
+          });
           sessionWindow.show();
         }
       },
@@ -54,6 +62,10 @@ let template = [
       },
       {
         label: 'Delete Session',
+        enabled: false
+      },
+      {
+        label: 'Clone Session',
         enabled: false
       },
       {
@@ -147,6 +159,7 @@ function loadTargetMenus(callback) {
   const targetsTemplateIndex = 1;
   const editIndex = 1;
   const deleteIndex = 2;
+  const cloneIndex = 3;
 
   storage.getTargets(function(err, targets) {
     if (err) {
@@ -156,12 +169,16 @@ function loadTargetMenus(callback) {
       if (targets.length) {
         template[targetsTemplateIndex].submenu[editIndex].submenu = [];
         template[targetsTemplateIndex].submenu[deleteIndex].submenu = [];
+        template[targetsTemplateIndex].submenu[cloneIndex].submenu = [];
 
         targets.forEach(function(item) {
           template[targetsTemplateIndex].submenu[editIndex].submenu.push({
             label: item.name,
             click: function() {
-              targetWindow.webContents.send('asynchronous-message', item.id);
+              targetWindow.webContents.send('asynchronous-message', {
+                command:  'editTarget',
+                targetId: item.id
+              });
               targetWindow.show();
             }
           });
@@ -181,14 +198,25 @@ function loadTargetMenus(callback) {
                     loadTargetMenus(function() {});
                   });
                 }
-                console.log(index);
               });
+            }
+          });
+
+          template[targetsTemplateIndex].submenu[cloneIndex].submenu.push({
+            label: item.name,
+            click: function() {
+              targetWindow.webContents.send('asynchronous-message', {
+                command:  'cloneTarget',
+                targetId: item.id
+              });
+              targetWindow.show();
             }
           });
         });
 
         template[targetsTemplateIndex].submenu[editIndex].enabled = true;
         template[targetsTemplateIndex].submenu[deleteIndex].enabled = true;
+        template[targetsTemplateIndex].submenu[cloneIndex].enabled = true;
       } else {
         if (template[targetsTemplateIndex].submenu[editIndex].submenu) {
           delete template[targetsTemplateIndex].submenu[editIndex].submenu;
@@ -198,8 +226,13 @@ function loadTargetMenus(callback) {
           delete template[targetsTemplateIndex].submenu[deleteIndex].submenu;
         }
 
+        if (template[targetsTemplateIndex].submenu[cloneIndex].submenu) {
+          delete template[targetsTemplateIndex].submenu[cloneIndex].submenu;
+        }
+
         template[targetsTemplateIndex].submenu[editIndex].enabled = false;
         template[targetsTemplateIndex].submenu[deleteIndex].enabled = false;
+        template[targetsTemplateIndex].submenu[cloneIndex].enabled = false;
       }
 
       Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -213,7 +246,8 @@ function loadSessionMenus(callback) {
   const sessionsTemplateIndex = 2;
   const editIndex = 1;
   const deleteIndex = 2;
-  const startSessionIndex = 4;
+  const cloneIndex = 3;
+  const startSessionIndex = 5;
 
   storage.getSessions(function(err, sessions) {
     if (err) {
@@ -223,6 +257,7 @@ function loadSessionMenus(callback) {
       if (sessions.length) {
         template[sessionsTemplateIndex].submenu[editIndex].submenu = [];
         template[sessionsTemplateIndex].submenu[deleteIndex].submenu = [];
+        template[sessionsTemplateIndex].submenu[cloneIndex].submenu = [];
         template[sessionsTemplateIndex].submenu[startSessionIndex].submenu = [];
 
         sessions.forEach(function(item, index) {
@@ -231,7 +266,10 @@ function loadSessionMenus(callback) {
           template[sessionsTemplateIndex].submenu[editIndex].submenu.push({
             label: item.name,
             click: function() {
-              sessionWindow.webContents.send('asynchronous-message', item.id);
+              sessionWindow.webContents.send('asynchronous-message', {
+                command:   'editSession',
+                sessionId: item.id
+              });
               sessionWindow.show();
             }
           });
@@ -251,8 +289,18 @@ function loadSessionMenus(callback) {
                     loadSessionMenus(function() {});
                   });
                 }
-                console.log(index);
               });
+            }
+          });
+
+          template[sessionsTemplateIndex].submenu[cloneIndex].submenu.push({
+            label: item.name,
+            click: function() {
+              sessionWindow.webContents.send('asynchronous-message', {
+                command:   'cloneSession',
+                sessionId: item.id
+              });
+              sessionWindow.show();
             }
           });
 
@@ -269,6 +317,7 @@ function loadSessionMenus(callback) {
 
         template[sessionsTemplateIndex].submenu[editIndex].enabled = true;
         template[sessionsTemplateIndex].submenu[deleteIndex].enabled = true;
+        template[sessionsTemplateIndex].submenu[cloneIndex].enabled = true;
         template[sessionsTemplateIndex].submenu[startSessionIndex].enabled = true;
       } else {
         if (template[sessionsTemplateIndex].submenu[editIndex].submenu) {
@@ -279,12 +328,17 @@ function loadSessionMenus(callback) {
           delete template[sessionsTemplateIndex].submenu[deleteIndex].submenu;
         }
 
+        if (template[sessionsTemplateIndex].submenu[cloneIndex].submenu) {
+          delete template[sessionsTemplateIndex].submenu[cloneIndex].submenu;
+        }
+
         if (template[sessionsTemplateIndex].submenu[startSessionIndex].submenu) {
           delete template[sessionsTemplateIndex].submenu[startSessionIndex].submenu;
         }
 
         template[sessionsTemplateIndex].submenu[editIndex].enabled = false;
         template[sessionsTemplateIndex].submenu[deleteIndex].enabled = false;
+        template[sessionsTemplateIndex].submenu[cloneIndex].enabled = false;
         template[sessionsTemplateIndex].submenu[startSessionIndex].enabled = false;
       }
 

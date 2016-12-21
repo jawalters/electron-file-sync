@@ -9,9 +9,9 @@
     $scope.session = {};
 
     ipcRenderer.on('asynchronous-message', function(event, arg) {
-      if (typeof arg === 'string') {
-        switch (arg) {
-          case 'new session':
+      if (typeof arg === 'object') {
+        switch (arg.command) {
+          case 'createSession':
             $scope.heading = 'Create Session';
             $scope.session.id = nodeUuid.v1();
             $scope.session.name = '';
@@ -28,8 +28,8 @@
             });
             break;
 
-          default:
-            storage.getSession({ id: arg }, function(err, session) {
+          case 'editSession':
+            storage.getSession({ id: arg.sessionId }, function(err, session) {
               if (err) {
                 console.log(err);
               } else {
@@ -51,6 +51,34 @@
                 }
               }
             });
+            break;
+
+          case 'cloneSession':
+            storage.getSession({ id: arg.sessionId }, function(err, session) {
+              if (err) {
+                console.log(err);
+              } else {
+                if (session) {
+                  $scope.heading = `Clone Session '${session.name}'`;
+                  $scope.session.id = nodeUuid.v1();
+                  $scope.session.name = session.name;
+                  $scope.session.targetId = session.targetId;
+                  $scope.session.localPath = session.localPath;
+                  $scope.session.remotePath = session.remotePath;
+                  $scope.session.recursive = session.recursive;
+                  $scope.session.fileIgnoreList = session.fileIgnoreList;
+                  storage.getTargets(function(err, targets) {
+                    if (!err) {
+                      $scope.targets = targets;
+                      $scope.$apply();
+                    }
+                  });
+                }
+              }
+            });
+            break;
+
+          default:
             break;
         }
       }
