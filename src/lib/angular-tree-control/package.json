@@ -1,0 +1,116 @@
+{
+  "_args": [
+    [
+      {
+        "raw": "angular-tree-control",
+        "scope": null,
+        "escapedName": "angular-tree-control",
+        "name": "angular-tree-control",
+        "rawSpec": "",
+        "spec": "latest",
+        "type": "tag"
+      },
+      "C:\\Projects\\electron\\electron-file-sync\\src"
+    ]
+  ],
+  "_from": "angular-tree-control@latest",
+  "_id": "angular-tree-control@0.2.28",
+  "_inCache": true,
+  "_location": "/angular-tree-control",
+  "_nodeVersion": "0.12.7",
+  "_npmOperationalInternal": {
+    "host": "packages-12-west.internal.npmjs.com",
+    "tmp": "tmp/angular-tree-control-0.2.28.tgz_1469616458274_0.5964532459620386"
+  },
+  "_npmUser": {
+    "name": "yoav",
+    "email": "yoavaa@gmail.com"
+  },
+  "_npmVersion": "2.12.1",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "angular-tree-control",
+    "scope": null,
+    "escapedName": "angular-tree-control",
+    "name": "angular-tree-control",
+    "rawSpec": "",
+    "spec": "latest",
+    "type": "tag"
+  },
+  "_requiredBy": [
+    "#USER"
+  ],
+  "_resolved": "https://registry.npmjs.org/angular-tree-control/-/angular-tree-control-0.2.28.tgz",
+  "_shasum": "6cf58d590ee8e0503bba899ae529ae4b8741083b",
+  "_shrinkwrap": null,
+  "_spec": "angular-tree-control",
+  "_where": "C:\\Projects\\electron\\electron-file-sync\\src",
+  "author": {
+    "name": "Yoav Abrahami"
+  },
+  "bugs": {
+    "url": "https://github.com/wix/angular-tree-control/issues"
+  },
+  "contributors": [
+    {
+      "name": "Benjamin Orozco",
+      "email": "benoror@gmail.com"
+    }
+  ],
+  "dependencies": {},
+  "description": "Angular Tree Control",
+  "devDependencies": {
+    "coveralls": "~2.6.1",
+    "grunt": "~0.4.2",
+    "grunt-contrib-connect": "~0.6.0",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-karma": "~0.6.2",
+    "grunt-release": "~0.6.0",
+    "karma": "~0.10.9",
+    "karma-chrome-launcher": "~0.1.2",
+    "karma-coffee-preprocessor": "~0.1.2",
+    "karma-coverage": "~0.1.4",
+    "karma-firefox-launcher": "~0.1.3",
+    "karma-growl-reporter": "~0.1.1",
+    "karma-html2js-preprocessor": "~0.1.0",
+    "karma-jasmine": "~0.1.5",
+    "karma-phantomjs-launcher": "~0.1.1",
+    "karma-requirejs": "~0.2.1",
+    "karma-script-launcher": "~0.1.0",
+    "requirejs": "~2.1.10"
+  },
+  "directories": {},
+  "dist": {
+    "shasum": "6cf58d590ee8e0503bba899ae529ae4b8741083b",
+    "tarball": "https://registry.npmjs.org/angular-tree-control/-/angular-tree-control-0.2.28.tgz"
+  },
+  "gitHead": "b345e2ad525ea749f4fd189aaae72cd352a555eb",
+  "homepage": "https://github.com/wix/angular-tree-control",
+  "license": "MIT",
+  "main": "angular-tree-control.js",
+  "maintainers": [
+    {
+      "name": "benoror",
+      "email": "benoror@gmail.com"
+    },
+    {
+      "name": "wix-ci",
+      "email": "ci@wix.com"
+    },
+    {
+      "name": "yoav",
+      "email": "yoavaa@gmail.com"
+    }
+  ],
+  "name": "angular-tree-control",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/wix/angular-tree-control.git"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "version": "0.2.28"
+}

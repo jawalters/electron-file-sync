@@ -10,7 +10,7 @@
     $scope.activeSessions = {};
     let activeSessionArr = [];
 
-    window.$ = window.jQuery = require('../bower_components/jquery/dist/jquery.min.js');
+    window.$ = window.jQuery = require('../node_modules/jquery/dist/jquery.min.js');
 
     function getSessionConfig(sessionId, callback) {
       storage.getSession({ id: sessionId }, function(err, sessionResult) {
