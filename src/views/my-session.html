@@ -25,6 +25,7 @@
                 tree-model="localFileList"
                 options="treeOptions"
                 on-selection="selectLocalFilterFile(node, selected)"
+                on-right-click="rightClickFile(node, selected)"
                 selected-node="node1"
                 selected-nodes="localFilterList">
                 {{ node.shortname }}
@@ -58,6 +59,7 @@
                 tree-model="remoteFileList"
                 options="treeOptions"
                 on-selection="selectRemoteFilterFile(node, selected)"
+                on-right-click="rightClickFile(node, selected)"
                 selected-node="node1"
                 selected-nodes="remoteFilterList">
                 {{ node.shortname }}

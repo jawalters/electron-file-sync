@@ -5,6 +5,7 @@ const async = require('async');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const mkdirp = require('mkdirp');
 
 function init(session, callback) {
   let self = this;
@@ -508,6 +509,32 @@ function pullFiles(filesToPull, stepFunction, callback) {
   }
 }
 
+function pullFileForDiff(fileToPull, tempFolder, callback) {
+  let self = this;
+
+  function pullFile(file, tf, cb) {
+    self.sftpSession.fastGet(
+      self.syncSession.remotePath + '/' + file,
+      path.join(tf, file),
+      cb
+    );
+  }
+
+  fs.stat(path.join(tempFolder, path.dirname(fileToPull)), function(err, stats) {
+    if (err) {
+      mkdirp(path.join(tempFolder, path.dirname(fileToPull)), function(err) {
+        if (err) {
+          callback(err);
+        } else {
+          pullFile(fileToPull, tempFolder, callback);
+        }
+      });
+    } else {
+      pullFile(fileToPull, tempFolder, callback);
+    }
+  });
+}
+
 function Sync() {
   this.conn = new Connection();
   this.connectionEstablished = false;
@@ -521,6 +548,7 @@ function Sync() {
   this.pushFiles = pushFiles;
   this.generateListOfFilesToPull = generateListOfFilesToPull;
   this.pullFiles = pullFiles;
+  this.pullFileForDiff = pullFileForDiff;
 
   return this;
 }

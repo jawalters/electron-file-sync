@@ -116,6 +116,10 @@
         .directive('mySession', function($timeout) {
           function link(scope, element, attrs) {
             let sync = new (require('../utils/sync.js'))();
+            const ipcRenderer = require('electron').ipcRenderer;
+            const cp = require('child_process');
+            const path = require('path');
+            const rimraf = require('rimraf');
 
             let state;
 
@@ -124,6 +128,51 @@
 
             scope.remoteFilterList = [];
             let remoteFilterFiles = new Set();
+
+            ipcRenderer.on('asynchronous-reply', function(event, arg) {
+              if ((typeof arg === 'object') && (arg.sessionId === scope.sessionConfig.id)) {
+                switch (arg.command) {
+                  case 'diff':
+                    storage.getSettings(function(err, settings) {
+                      if (err) {
+                        console.log(err);
+                      } else {
+                        let tempFolder = settings.tempFolder.replace(/%appdir%/g, process.cwd());
+                        sync.pullFileForDiff(arg.filename, tempFolder, function(err) {
+                          if (err) {
+                            // attn - show in UI
+                            console.log(err);
+                          } else {
+                            let localFilePath = path.join(scope.sessionConfig.localPath, arg.filename);
+                            let remoteFilePath = path.join(tempFolder, arg.filename);
+                            let command = settings.diffToolInvocation;
+                            command = command.replace(/%file%/g, arg.filename);
+                            command = command.replace(/%localfile%/g, path.normalize(localFilePath));
+                            command = command.replace(/%remotefile%/g, path.normalize(remoteFilePath));
+                            cp.exec(command, function(err) {
+                              if (err) {
+                                console.log(err);
+                              } else {
+                                if (settings.clearTempFolder) {
+                                  rimraf(tempFolder, function(err) {
+                                    if (err) {
+                                      console.log(err);
+                                    }
+                                  });
+                                }
+                              }
+                            });
+                          }
+                        });
+                      }
+                    });
+                    break;
+
+                  default:
+                    break;
+                }
+              }
+            });
 
             function setState(newState) {
               state = newState;
@@ -230,6 +279,10 @@
               } else {
                 localFilterFiles.delete(node.filename);
               }
+            };
+
+            scope.rightClickFile = function(node, selected) {
+              ipcRenderer.send('asynchronous-message', `right-click ${node.filename} ${scope.sessionConfig.id}`);
             };
 
             scope.clearLocalFilterList = function() {

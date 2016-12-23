@@ -12,6 +12,7 @@ const dialog = electron.dialog;
 let mainWindow;
 let targetWindow;
 let sessionWindow;
+let settingsWindow;
 
 let activeSessions = {};
 
@@ -80,7 +81,7 @@ let template = [
 ];
 
 function createMainWindow() {
-  mainWindow = new BrowserWindow({ width: 800, height: 600 });
+  mainWindow = new BrowserWindow({ width: 1600, height: 900 });
 
   mainWindow.loadURL(`file://${ __dirname }/views/main.html`);
 
@@ -122,6 +123,20 @@ function createSessionWindow() {
   sessionWindow.setMenu(null);
 }
 
+function createSettingsWindow() {
+  settingsWindow = new BrowserWindow({ width: 700, height: 500, frame: false, show: false });
+
+  settingsWindow.loadURL(`file://${ __dirname }/views/settings.html`);
+
+  settingsWindow.webContents.openDevTools();
+
+  settingsWindow.on('closed', function() {
+    settingsWindow = null;
+  });
+
+  settingsWindow.setMenu(null);
+}
+
 app.on('ready', function() {
   storage.init('file-sync.db', function() {
     loadMenu();
@@ -130,6 +145,7 @@ app.on('ready', function() {
         createMainWindow();
         createTargetWindow();
         createSessionWindow();
+        createSettingsWindow();
       });
     });
   });
@@ -152,6 +168,10 @@ app.on('activate', function() {
 
   if (sessionWindow === null) {
     createSessionWindow();
+  }
+
+  if (settingsWindow === null) {
+    createSettingsWindow();
   }
 });
 
@@ -364,6 +384,15 @@ function loadMenu() {
             type: 'separator'
           },
           {
+            label: 'Settings',
+            click: function() {
+              settingsWindow.show();
+            }
+          },
+          {
+            type: 'separator'
+          },
+          {
             label: 'Quit',
             accelerator: 'CmdOrCtrl+Q',
             click: function() {
@@ -378,6 +407,15 @@ function loadMenu() {
       {
         label: 'File',
         submenu: [
+          {
+            label: 'Settings',
+            click: function() {
+              settingsWindow.show();
+            }
+          },
+          {
+            type: 'separator'
+          },
           {
             label: 'Quit',
             accelerator: 'CmdOrCtrl+Q',
@@ -423,6 +461,30 @@ ipcMain.on('asynchronous-message', function(event, arg) {
       case 'session-ended':
         delete activeSessions[tokens[1]];
         loadSessionMenus(function() { });
+        break;
+
+      case 'settings-saved':
+        settingsWindow.hide();
+        break;
+
+      case 'settings-cancelled':
+        settingsWindow.hide();
+        break;
+
+      case 'right-click':
+        const menu = new Menu();
+        menu.append(new MenuItem({
+          label: `Diff ${tokens[1]}`,
+          click: function() {
+            event.sender.send('asynchronous-reply', {
+              command:   'diff',
+              filename:  tokens[1],
+              sessionId: tokens[2]
+            });
+          }
+        }));
+        const win = BrowserWindow.fromWebContents(event.sender);
+        menu.popup(win);
         break;
 
       default:

@@ -1,2 +1,4 @@
 node_modules
 file-sync.db
+tmp
+.vscode
